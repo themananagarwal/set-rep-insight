@@ -1,6 +1,6 @@
-import { startOfMonth, endOfMonth, eachDayOfInterval, format, isSameMonth, isSameDay } from "date-fns";
+import { startOfMonth, endOfMonth, eachDayOfInterval, format, isSameDay } from "date-fns";
 import { useTrainerStore } from "../lib/store";
-import { ChevronLeft, ChevronRight, Check } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import clsx from "clsx";
 

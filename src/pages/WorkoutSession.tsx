@@ -24,7 +24,7 @@ export default function WorkoutSession() {
         ? activeDay.exercises.findIndex(e => e.exerciseId === exerciseIdParam)
         : 0;
 
-    const [exerciseIndex, setExerciseIndex] = useState(initialIndex >= 0 ? initialIndex : 0);
+    const [exerciseIndex] = useState(initialIndex >= 0 ? initialIndex : 0);
     // Local session history for immediate UI updates & AI context
     const [sessionSets, setSessionSets] = useState<WorkoutSet[]>([]);
 

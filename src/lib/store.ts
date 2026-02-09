@@ -25,6 +25,7 @@ interface TrainerState {
 
     addSet: (set: WorkoutSet) => void;
     addExercise: (name: string, muscle: string) => void;
+    completeActiveRoutineDay: () => void;
     getPrediction: (exerciseId: string) => Prediction;
 }
 
@@ -57,7 +58,7 @@ export const useTrainerStore = create<TrainerState>()(
             setActiveRoutine: (id) => set({ activeRoutineId: id }),
 
             // Legacy Support: setRoutine just overwrites the list with 1 item or updates active
-            setRoutine: (routine) => set((state) => {
+            setRoutine: (routine) => set(() => {
                 // If routine exists, update it? No, legacy behavior was "replace current".
                 // We'll treat this as "Create/Replace the Main Plan".
                 return {
@@ -78,6 +79,25 @@ export const useTrainerStore = create<TrainerState>()(
                     type: "isolation"
                 };
                 return { exercises: [...state.exercises, newEx] };
+            }),
+
+            completeActiveRoutineDay: () => set((state) => {
+                if (!state.activeRoutineId) return {};
+
+                const routine = state.routines.find(r => r.id === state.activeRoutineId);
+                if (!routine) return {};
+
+                const nextDayIndex = (routine.currentDayIndex + 1) % routine.days.length;
+
+                const updatedRoutine = {
+                    ...routine,
+                    currentDayIndex: nextDayIndex,
+                    lastModified: Date.now()
+                };
+
+                return {
+                    routines: state.routines.map(r => r.id === routine.id ? updatedRoutine : r)
+                };
             }),
 
             getPrediction: (exerciseId) => {

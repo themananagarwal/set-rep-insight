@@ -31,7 +31,7 @@ export function analyzeWeaknesses(history: WorkoutSet[], exercises: Exercise[]):
     return weaknesses;
 }
 
-export function generateRoutine(user: UserProfile | null, weaknesses: string[]): Routine {
+export function generateRoutine(user: UserProfile | null, _weaknesses: string[]): Routine {
     const goal = user?.goal || "strength";
 
     // Default Template

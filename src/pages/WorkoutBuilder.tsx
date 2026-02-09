@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTrainerStore } from "../lib/store";
-import type { Routine, WorkoutDay, WorkoutExercisePattern, TargetSet } from "../lib/types";
-import { Save, Plus, Trash2, GripVertical, ChevronDown, ChevronUp, Copy, Dumbbell } from "lucide-react";
+import type { Routine, WorkoutExercisePattern, TargetSet } from "../lib/types";
+import { Save, Plus, Trash2, ChevronDown, Copy, Dumbbell } from "lucide-react";
 import { generateID } from "../lib/utils";
 import clsx from "clsx";
 
@@ -74,27 +74,27 @@ export default function WorkoutBuilder() {
     };
 
     // --- DAY MANAGEMENT ---
-    const addDay = () => {
-        const newDay: WorkoutDay = {
-            id: generateID(),
-            name: `Day ${draft.days.length + 1}`,
-            exercises: []
-        };
-        setDraft(prev => ({ ...prev, days: [...prev.days, newDay] }));
-        setActiveDayId(newDay.id);
-    };
+    // const addDay = () => {
+    //     const newDay: WorkoutDay = {
+    //         id: generateID(),
+    //         name: `Day ${draft.days.length + 1}`,
+    //         exercises: []
+    //     };
+    //     setDraft(prev => ({ ...prev, days: [...prev.days, newDay] }));
+    //     setActiveDayId(newDay.id);
+    // };
 
-    const updateDayName = (dayId: string, name: string) => {
-        setDraft(prev => ({
-            ...prev,
-            days: prev.days.map(d => d.id === dayId ? { ...d, name } : d)
-        }));
-    };
+    // const updateDayName = (dayId: string, name: string) => {
+    //     setDraft(prev => ({
+    //         ...prev,
+    //         days: prev.days.map(d => d.id === dayId ? { ...d, name } : d)
+    //     }));
+    // };
 
-    const deleteDay = (dayId: string) => {
-        // ... (Logic removed as we fixed days, but keeping function structure if needed or removing it)
-        // Since we removed the delete button, this is dead code, but let's effectively disable it or repurpose
-    };
+    // const deleteDay = (dayId: string) => {
+    //     // ... (Logic removed as we fixed days, but keeping function structure if needed or removing it)
+    //     // Since we removed the delete button, this is dead code, but let's effectively disable it or repurpose
+    // };
 
     const handleCopyDay = (sourceDayId: string) => {
         const sourceDay = draft.days.find(d => d.id === sourceDayId);
@@ -282,7 +282,7 @@ export default function WorkoutBuilder() {
                     {/* Exercises List */}
                     <div className="space-y-4">
                         {currentDay.exercises.map((exPattern, exIndex) => {
-                            const exerciseData = exercises.find(e => e.id === exPattern.exerciseId);
+                            // const exerciseData = exercises.find(e => e.id === exPattern.exerciseId);
                             return (
                                 <div key={exIndex} className="bg-surface border border-secondary p-4 rounded-xl relative group">
                                     {/* Exercise Header */}

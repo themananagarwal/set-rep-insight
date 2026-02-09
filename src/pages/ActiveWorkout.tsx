@@ -5,7 +5,7 @@ import clsx from "clsx";
 
 export default function ActiveWorkout() {
     const navigate = useNavigate();
-    const { history, routines, activeRoutineId } = useTrainerStore();
+    const { history, routines, activeRoutineId, completeActiveRoutineDay } = useTrainerStore();
     const routine = routines.find(r => r.id === activeRoutineId);
 
     if (!routine) {
@@ -23,6 +23,7 @@ export default function ActiveWorkout() {
 
     const handleEndWorkout = () => {
         if (confirm("Are you sure you want to end this workout?")) {
+            completeActiveRoutineDay();
             navigate("/");
         }
     };

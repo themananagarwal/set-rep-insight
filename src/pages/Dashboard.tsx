@@ -1,8 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useTrainerStore } from "../lib/store";
-import { Play, TrendingUp, Calendar, AlertCircle, Check, Dumbbell } from "lucide-react";
+import { Play, TrendingUp, Calendar, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
-import clsx from "clsx";
 
 export default function Dashboard() {
     const navigate = useNavigate();

@@ -1,11 +1,10 @@
 import { useNavigate } from "react-router-dom";
 import { useTrainerStore } from "../lib/store";
-import { Plus, ChevronRight, Calendar, Dumbbell, Trash2, Edit } from "lucide-react";
-import { format } from "date-fns";
+import { Plus, Calendar, Dumbbell, Trash2, Edit } from "lucide-react";
 
 export default function WorkoutManager() {
     const navigate = useNavigate();
-    const { routines, deleteRoutine, setActiveRoutine } = useTrainerStore();
+    const { routines, deleteRoutine } = useTrainerStore();
 
     const handleDelete = (e: React.MouseEvent, id: string) => {
         e.stopPropagation();

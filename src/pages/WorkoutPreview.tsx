@@ -1,7 +1,9 @@
 import { useParams, useNavigate } from "react-router-dom";
+import { useState, useRef, useEffect } from "react";
 import { useTrainerStore } from "../lib/store";
 import { Play, Calendar, ChevronLeft, Dumbbell, Clock } from "lucide-react";
 import clsx from "clsx";
+
 
 export default function WorkoutPreview() {
     const { id } = useParams();
@@ -14,18 +16,41 @@ export default function WorkoutPreview() {
         return (
             <div className="p-6 text-center">
                 <h2 className="text-xl font-bold text-red-500">Routine Not Found</h2>
-                <button onClick={() => navigate("/workouts")} className="btn btn-secondary mt-4">
+                <button onClick={() => navigate("/workout")} className="btn btn-secondary mt-4">
                     Back to Workouts
                 </button>
             </div>
         );
     }
 
-    const currentDay = routine.days[routine.currentDayIndex || 0];
+    const [selectedDayIndex, setSelectedDayIndex] = useState(routine.currentDayIndex);
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+    // Scroll to selected day on mount
+    useEffect(() => {
+        if (scrollContainerRef.current) {
+            const selectedElement = scrollContainerRef.current.children[selectedDayIndex] as HTMLElement;
+            if (selectedElement) {
+                scrollContainerRef.current.scrollTo({
+                    left: selectedElement.offsetLeft - 24, // 24px padding
+                    behavior: 'smooth'
+                });
+            }
+        }
+    }, [selectedDayIndex]);
+
+
+    const currentDay = routine.days[selectedDayIndex || 0];
     const totalExercises = currentDay?.exercises.length || 0;
     const estimatedTime = totalExercises * 5 + 10; // Rough estimate: 5 mins per exercise + 10 warmpup
 
     const handleActivate = () => {
+        // If user selected a different day, update the routine's progress to that day
+        if (selectedDayIndex !== routine.currentDayIndex) {
+            // We need to update the routine in the store
+            useTrainerStore.getState().updateRoutine(routine.id, { currentDayIndex: selectedDayIndex });
+        }
+
         setActiveRoutine(routine.id);
         navigate("/workout/active");
     };
@@ -35,7 +60,7 @@ export default function WorkoutPreview() {
             {/* Header Image / Pattern */}
             <div className="h-64 bg-gradient-to-b from-primary/20 to-background flex flex-col justify-end p-6 relative">
                 <button
-                    onClick={() => navigate("/workouts")}
+                    onClick={() => navigate("/workout")}
                     className="absolute top-6 left-4 p-2 bg-black/20 backdrop-blur rounded-full text-white hover:bg-white/10"
                 >
                     <ChevronLeft size={24} />
@@ -65,14 +90,57 @@ export default function WorkoutPreview() {
                     </div>
                 </div>
 
+                {/* Day Selector */}
+                <div>
+                    <h3 className="text-sm font-bold text-text-muted mb-3 uppercase tracking-wider">Select Day</h3>
+                    <div
+                        ref={scrollContainerRef}
+                        className="flex gap-3 overflow-x-auto pb-4 pt-4 -mt-4 px-1 snap-x"
+                    >
+                        {routine.days.map((day, index) => {
+                            const isSelected = selectedDayIndex === index;
+                            const isSuggested = routine.currentDayIndex === index;
+
+                            return (
+                                <button
+                                    key={index}
+                                    onClick={() => setSelectedDayIndex(index)}
+                                    className={clsx(
+                                        "min-w-[140px] p-4 rounded-xl border transition-all snap-start relative flex flex-col text-left gap-1 mt-2",
+                                        isSelected
+                                            ? "bg-primary text-white border-primary shadow-lg shadow-primary/20 scale-[1.02]"
+                                            : "bg-surface border-white/5 hover:border-white/10"
+                                    )}
+                                >
+                                    {isSuggested && (
+                                        <div className={clsx(
+                                            "absolute -top-3 -right-2 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide border shadow-sm",
+                                            isSelected
+                                                ? "bg-white text-primary border-white"
+                                                : "bg-primary text-white border-primary"
+                                        )}>
+                                            Suggested
+                                        </div>
+                                    )}
+                                    <span className={clsx("text-xs font-bold uppercase opacity-60", isSelected ? "text-white" : "text-text-muted")}>
+                                        Day {index + 1}
+                                    </span>
+                                    <span className="font-bold truncate w-full">{day.name}</span>
+                                    <span className="text-xs opacity-80">{day.exercises.length} Exercises</span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+
                 {/* Day Preview */}
                 <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                        <h2 className="text-xl font-bold">Today's Session</h2>
+                        <h2 className="text-xl font-bold">Session Details</h2>
                         <span className="text-sm text-primary font-bold">{currentDay?.name}</span>
                     </div>
 
-                    <div className="space-y-3">
+                    <div className="space-y-3 pb-24">
                         {currentDay?.exercises.map((ex, i) => (
                             <div key={i} className="flex items-center gap-4 p-4 bg-secondary/30 rounded-xl border border-white/5">
                                 <div className="w-10 h-10 rounded-full bg-surface flex items-center justify-center text-text-muted">
@@ -94,14 +162,16 @@ export default function WorkoutPreview() {
             </div>
 
             {/* Floating Action Button */}
-            {/* Floating Action Button */}
-            <div className="fixed bottom-20 left-0 w-full px-6 z-40 pointer-events-none">
-                <button
-                    onClick={handleActivate}
-                    className="btn btn-primary w-full py-3 text-base font-bold shadow-xl shadow-primary/20 flex items-center justify-center gap-2 pointer-events-auto rounded-2xl"
-                >
-                    <Play size={20} fill="currentColor" /> Start Workout
-                </button>
+            <div className="fixed bottom-24 left-0 w-full px-6 z-40 pointer-events-none">
+                <div className="max-w-md mx-auto pointer-events-auto">
+                    <button
+                        onClick={handleActivate}
+                        className="btn btn-primary w-full py-4 text-lg font-bold shadow-2xl shadow-primary/30 flex items-center justify-center gap-3 rounded-2xl"
+                    >
+                        <Play size={24} fill="currentColor" />
+                        {selectedDayIndex === routine.currentDayIndex ? "Start Workout" : `Jump to Day ${selectedDayIndex + 1}`}
+                    </button>
+                </div>
             </div>
         </div>
     );
