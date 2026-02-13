@@ -36,7 +36,7 @@ const EXERCISE_CONTRIBUTIONS: Record<string, Partial<Record<RadarAxis, number>>>
     "machine_chest_press": { "chest": 1.0, "shoulders": 0.2, "arms": 0.2 },
 
     // --- BACK ---
-    "deadlift": { "back": 0.8, "glutes_hamstrings": 0.8, "core": 0.5, "traps": 0.5 },
+    "deadlift": { "back": 0.8, "glutes_hamstrings": 0.8, "core": 0.5 },
     // Note: We don't have "traps" axis, mapping to Back usually covers it, 
     // but the prompt had "Back" as axis. I'll stick to provided axes.
     "pull_up": { "back": 1.0, "arms": 0.4, "core": 0.3 },

@@ -1,5 +1,6 @@
 import type { WorkoutSet, Exercise } from "./types";
-import { startOfMonth, subDays, isAfter, isSameDay } from "date-fns";
+import type { WorkoutSet, Exercise } from "./types";
+import { subDays, isAfter } from "date-fns";
 
 export type ProgressPoint = {
     date: number; // timestamp

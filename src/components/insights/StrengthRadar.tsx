@@ -1,4 +1,4 @@
-import { ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend, Tooltip } from "recharts";
+import { ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Tooltip } from "recharts";
 import type { RadarDataPoint } from "../../lib/radar-helpers";
 
 interface StrengthRadarProps {
@@ -17,7 +17,7 @@ export function StrengthRadar({ data }: StrengthRadarProps) {
     // Custom Tick for Axis Labels to include Tier
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const renderTick = (props: any) => {
-        const { payload, x, y, textAnchor, stroke, radius } = props;
+        const { payload, x, y, textAnchor } = props;
         const dataPoint = data.find(d => d.label === payload.value);
         const tier = dataPoint ? dataPoint.tier : "?";
 
@@ -79,8 +79,9 @@ export function StrengthRadar({ data }: StrengthRadarProps) {
                         <Tooltip
                             contentStyle={{ backgroundColor: '#111', borderColor: '#333', borderRadius: '12px', fontSize: '12px' }}
                             itemStyle={{ color: '#fff' }}
-                            formatter={(value: number, name: string, props: any) => {
-                                const ratio = props.payload.ratio.toFixed(2);
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                            formatter={(value: any, _name: string, props: any) => {
+                                const ratio = props.payload.ratio ? props.payload.ratio.toFixed(2) : "0.00";
                                 return [`${value} (Ratio: ${ratio}x)`, "Score"];
                             }}
                         />
