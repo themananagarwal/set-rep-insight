@@ -80,7 +80,7 @@ export function StrengthRadar({ data }: StrengthRadarProps) {
                             contentStyle={{ backgroundColor: '#111', borderColor: '#333', borderRadius: '12px', fontSize: '12px' }}
                             itemStyle={{ color: '#fff' }}
                             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                            formatter={(value: any, _name: string, props: any) => {
+                            formatter={(value: any, _name: any, props: any) => {
                                 const ratio = props.payload.ratio ? props.payload.ratio.toFixed(2) : "0.00";
                                 return [`${value} (Ratio: ${ratio}x)`, "Score"];
                             }}

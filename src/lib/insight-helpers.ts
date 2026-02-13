@@ -1,5 +1,4 @@
 import type { WorkoutSet, Exercise } from "./types";
-import type { WorkoutSet, Exercise } from "./types";
 import { subDays, isAfter } from "date-fns";
 
 export type ProgressPoint = {
