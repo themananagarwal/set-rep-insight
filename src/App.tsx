@@ -15,8 +15,16 @@ import Profile from "./pages/Profile";
 
 // ...
 
+import { useEffect } from "react";
+
+// ...
+
 function App() {
-  const { user } = useTrainerStore();
+  const { user, syncExercises } = useTrainerStore();
+
+  useEffect(() => {
+    syncExercises();
+  }, [syncExercises]);
 
   return (
     <BrowserRouter>

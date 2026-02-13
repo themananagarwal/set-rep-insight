@@ -27,6 +27,7 @@ interface TrainerState {
     addExercise: (name: string, muscle: string) => void;
     completeActiveRoutineDay: () => void;
     getPrediction: (exerciseId: string) => Prediction;
+    syncExercises: () => void;
 }
 
 export const useTrainerStore = create<TrainerState>()(
@@ -103,7 +104,18 @@ export const useTrainerStore = create<TrainerState>()(
             getPrediction: (exerciseId) => {
                 const { history, user } = get();
                 return predictNextSet(exerciseId, history, user);
-            }
+            },
+
+            syncExercises: () => set((state) => {
+                const currentIds = new Set(state.exercises.map(e => e.id));
+                const missing = ALL_EXERCISES.filter(e => !currentIds.has(e.id));
+
+                if (missing.length === 0) return {};
+
+                return {
+                    exercises: [...state.exercises, ...missing]
+                };
+            })
         }),
         {
             name: "pt_storage",
