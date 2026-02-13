@@ -57,5 +57,15 @@ export const ALL_EXERCISES: Exercise[] = [
     { id: "plank", name: "Plank", muscle: "Core", type: "isolation" },
     { id: "crunch", name: "Crunch", muscle: "Core", type: "isolation" },
     { id: "leg_raise", name: "Hanging Leg Raise", muscle: "Core", type: "isolation" },
-    { id: "cable_crunch", name: "Cable Crunch", muscle: "Core", type: "isolation" }
+    { id: "lying_leg_raise", name: "Lying Leg Raise", muscle: "Legs", type: "isolation" }, // User asked for Lying Leg Raise under Legs
+    { id: "cable_crunch", name: "Cable Crunch", muscle: "Core", type: "isolation" },
+
+    // --- CARDIO ---
+    { id: "cycling", name: "Cycling", muscle: "Cardio", type: "compound" },
+
+    // --- NEW ADDITIONS ---
+    { id: "glute_bridge", name: "Glute Bridge", muscle: "Legs", type: "isolation" },
+    { id: "tibialis_raise", name: "Tibialis Raise", muscle: "Legs", type: "isolation" },
+    { id: "knee_press", name: "Knee Press", muscle: "Legs", type: "isolation" }, // Assuming this is a leg exercise as requested
+    { id: "machine_chest_press", name: "Machine Chest Press", muscle: "Chest", type: "compound" }
 ];

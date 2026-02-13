@@ -282,82 +282,98 @@ export default function WorkoutBuilder() {
                     {/* Exercises List */}
                     <div className="space-y-4">
                         {currentDay.exercises.map((exPattern, exIndex) => {
-                            // const exerciseData = exercises.find(e => e.id === exPattern.exerciseId);
+                            const exerciseData = exercises.find(e => e.id === exPattern.exerciseId);
+                            const isCardio = exerciseData?.muscle === "Cardio";
+
                             return (
                                 <div key={exIndex} className="bg-surface border border-secondary p-4 rounded-xl relative group">
                                     {/* Exercise Header */}
                                     <div className="flex justify-between items-start mb-4">
-                                        <div className="flex items-center gap3">
+                                        <div className="flex items-center gap-2 w-full pr-8">
                                             {/* Exercise Selector / Dropdown simulated */}
-                                            <select
-                                                value={exPattern.exerciseId}
-                                                onChange={(e) => updateExercise(currentDay.id, exIndex, 'exerciseId', e.target.value)}
-                                                className="bg-transparent font-bold text-lg appearance-none cursor-pointer hover:underline outline-none w-full"
-                                            >
-                                                {Array.from(new Set(exercises.map(e => e.muscle))).sort().map(muscle => (
-                                                    <optgroup key={muscle} label={muscle}>
-                                                        {exercises.filter(e => e.muscle === muscle).map(e => (
-                                                            <option key={e.id} value={e.id} className="text-black">{e.name}</option>
-                                                        ))}
-                                                    </optgroup>
-                                                ))}
-                                            </select>
-                                            <ChevronDown size={14} className="text-text-muted ml-1" />
+                                            <div className="relative w-full">
+                                                <select
+                                                    value={exPattern.exerciseId}
+                                                    onChange={(e) => updateExercise(currentDay.id, exIndex, 'exerciseId', e.target.value)}
+                                                    className="bg-transparent font-bold text-lg appearance-none cursor-pointer hover:underline outline-none w-full pr-6"
+                                                >
+                                                    {Array.from(new Set(exercises.map(e => e.muscle))).sort().map(muscle => (
+                                                        <optgroup key={muscle} label={muscle}>
+                                                            {exercises.filter(e => e.muscle === muscle).map(e => (
+                                                                <option key={e.id} value={e.id} className="text-black">{e.name}</option>
+                                                            ))}
+                                                        </optgroup>
+                                                    ))}
+                                                </select>
+                                                <ChevronDown size={14} className="text-text-muted absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                            </div>
                                         </div>
                                         <button
                                             onClick={() => deleteExercise(currentDay.id, exIndex)}
-                                            className="text-text-muted hover:text-red-400 p-1"
+                                            className="text-text-muted hover:text-red-400 p-1 absolute top-4 right-4"
                                         >
                                             <Trash2 size={16} />
                                         </button>
                                     </div>
 
-                                    {/* Sets Table */}
-                                    <div className="space-y-2">
-                                        <div className="grid grid-cols-[30px_1fr_1fr_1fr_30px] gap-2 text-xs text-text-muted uppercase font-bold text-center mb-1">
-                                            <span>#</span>
-                                            <span>Reps</span>
-                                            <span>kg</span>
-                                            <span>RPE</span>
-                                            <span></span>
-                                        </div>
-                                        {(exPattern.sets || []).map((set, setIndex) => (
-                                            <div key={set.id || setIndex} className="grid grid-cols-[30px_1fr_1fr_1fr_30px] gap-2 items-center">
-                                                <span className="text-center text-xs text-text-muted font-mono">{setIndex + 1}</span>
-                                                <input
-                                                    value={set.reps}
-                                                    onChange={(e) => updateSet(currentDay.id, exIndex, setIndex, 'reps', e.target.value)}
-                                                    className="bg-secondary rounded p-1 text-center text-sm font-bold focus:ring-1 ring-primary outline-none w-full min-w-0"
-                                                    placeholder="10"
-                                                />
-                                                <input
-                                                    value={set.weight || ""}
-                                                    onChange={(e) => updateSet(currentDay.id, exIndex, setIndex, 'weight', e.target.value)}
-                                                    className="bg-secondary rounded p-1 text-center text-sm focus:ring-1 ring-primary outline-none w-full min-w-0"
-                                                    placeholder="-"
-                                                />
-                                                <input
-                                                    value={set.rpe || ""}
-                                                    onChange={(e) => updateSet(currentDay.id, exIndex, setIndex, 'rpe', e.target.value)}
-                                                    className="bg-secondary rounded p-1 text-center text-sm focus:ring-1 ring-primary outline-none w-full min-w-0"
-                                                    placeholder="8"
-                                                />
-                                                <button
-                                                    onClick={() => removeSet(currentDay.id, exIndex, setIndex)}
-                                                    className="text-text-muted hover:text-red-400 flex justify-center"
-                                                >
-                                                    <Trash2 size={14} />
-                                                </button>
+                                    {/* Sets Table or Cardio Message */}
+                                    {isCardio ? (
+                                        <div className="bg-secondary/30 rounded-lg p-4 text-center border border-white/5">
+                                            <div className="flex items-center justify-center gap-2 text-primary font-bold text-sm mb-1">
+                                                <Dumbbell size={16} />
+                                                <span>Cardio Mode</span>
                                             </div>
-                                        ))}
+                                            <p className="text-xs text-text-muted">
+                                                Duration and intervals will be configured during the workout.
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-2">
+                                            <div className="grid grid-cols-[30px_1fr_1fr_1fr_30px] gap-2 text-xs text-text-muted uppercase font-bold text-center mb-1">
+                                                <span>#</span>
+                                                <span>Reps</span>
+                                                <span>kg</span>
+                                                <span>RPE</span>
+                                                <span></span>
+                                            </div>
+                                            {(exPattern.sets || []).map((set, setIndex) => (
+                                                <div key={set.id || setIndex} className="grid grid-cols-[30px_1fr_1fr_1fr_30px] gap-2 items-center">
+                                                    <span className="text-center text-xs text-text-muted font-mono">{setIndex + 1}</span>
+                                                    <input
+                                                        value={set.reps}
+                                                        onChange={(e) => updateSet(currentDay.id, exIndex, setIndex, 'reps', e.target.value)}
+                                                        className="bg-secondary rounded p-1 text-center text-sm font-bold focus:ring-1 ring-primary outline-none w-full min-w-0"
+                                                        placeholder="10"
+                                                    />
+                                                    <input
+                                                        value={set.weight || ""}
+                                                        onChange={(e) => updateSet(currentDay.id, exIndex, setIndex, 'weight', e.target.value)}
+                                                        className="bg-secondary rounded p-1 text-center text-sm focus:ring-1 ring-primary outline-none w-full min-w-0"
+                                                        placeholder="-"
+                                                    />
+                                                    <input
+                                                        value={set.rpe || ""}
+                                                        onChange={(e) => updateSet(currentDay.id, exIndex, setIndex, 'rpe', e.target.value)}
+                                                        className="bg-secondary rounded p-1 text-center text-sm focus:ring-1 ring-primary outline-none w-full min-w-0"
+                                                        placeholder="8"
+                                                    />
+                                                    <button
+                                                        onClick={() => removeSet(currentDay.id, exIndex, setIndex)}
+                                                        className="text-text-muted hover:text-red-400 flex justify-center"
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </div>
+                                            ))}
 
-                                        <button
-                                            onClick={() => addSet(currentDay.id, exIndex)}
-                                            className="w-full py-2 flex items-center justify-center gap-2 text-xs font-bold text-primary hover:bg-primary/10 rounded-lg mt-2 transition-colors"
-                                        >
-                                            <Plus size={14} /> Add Set
-                                        </button>
-                                    </div>
+                                            <button
+                                                onClick={() => addSet(currentDay.id, exIndex)}
+                                                className="w-full py-2 flex items-center justify-center gap-2 text-xs font-bold text-primary hover:bg-primary/10 rounded-lg mt-2 transition-colors"
+                                            >
+                                                <Plus size={14} /> Add Set
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             );
                         })}

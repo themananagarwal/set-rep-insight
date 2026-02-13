@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTrainerStore } from "../lib/store";
 import { Plus, Calendar, Dumbbell, Trash2, Edit } from "lucide-react";
@@ -5,11 +6,17 @@ import { Plus, Calendar, Dumbbell, Trash2, Edit } from "lucide-react";
 export default function WorkoutManager() {
     const navigate = useNavigate();
     const { routines, deleteRoutine } = useTrainerStore();
+    const [deleteCandidateId, setDeleteCandidateId] = useState<string | null>(null);
 
-    const handleDelete = (e: React.MouseEvent, id: string) => {
+    const handleDeleteClick = (e: React.MouseEvent, id: string) => {
         e.stopPropagation();
-        if (confirm("Are you sure you want to delete this plan?")) {
-            deleteRoutine(id);
+        setDeleteCandidateId(id);
+    };
+
+    const confirmDelete = () => {
+        if (deleteCandidateId) {
+            deleteRoutine(deleteCandidateId);
+            setDeleteCandidateId(null);
         }
     };
 
@@ -54,7 +61,7 @@ export default function WorkoutManager() {
                                         <Edit size={16} />
                                     </button>
                                     <button
-                                        onClick={(e) => handleDelete(e, routine.id)}
+                                        onClick={(e) => handleDeleteClick(e, routine.id)}
                                         className="p-2 bg-secondary hover:bg-red-500/20 rounded-full text-text-muted hover:text-red-400 transition-colors"
                                     >
                                         <Trash2 size={16} />
@@ -83,6 +90,37 @@ export default function WorkoutManager() {
             >
                 <Plus size={28} />
             </button>
+
+            {/* Delete Confirmation Modal */}
+            {deleteCandidateId && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-6">
+                    <div className="bg-surface border border-white/10 p-6 rounded-2xl w-full max-w-sm space-y-4 shadow-2xl animate-in fade-in zoom-in-95">
+                        <div className="text-center space-y-2">
+                            <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center mx-auto text-red-500 mb-2">
+                                <Trash2 size={24} />
+                            </div>
+                            <h3 className="text-xl font-bold">Delete Plan?</h3>
+                            <p className="text-sm text-text-muted">
+                                This action cannot be undone. The workout plan will be permanently removed.
+                            </p>
+                        </div>
+                        <div className="flex gap-3 pt-2">
+                            <button
+                                onClick={() => setDeleteCandidateId(null)}
+                                className="flex-1 py-3 rounded-xl font-bold bg-secondary hover:bg-white/10 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={confirmDelete}
+                                className="flex-1 py-3 rounded-xl font-bold bg-red-500 text-white hover:bg-red-600 transition-colors shadow-lg shadow-red-500/20"
+                            >
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

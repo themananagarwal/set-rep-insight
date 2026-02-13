@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTrainerStore } from "../lib/store";
 import { Dumbbell, Check, ArrowLeft, Flag } from "lucide-react";
@@ -20,12 +21,15 @@ export default function ActiveWorkout() {
     }
 
     const activeDay = routine.days[routine.currentDayIndex];
+    const [showFinishModal, setShowFinishModal] = useState(false);
 
     const handleEndWorkout = () => {
-        if (confirm("Are you sure you want to end this workout?")) {
-            completeActiveRoutineDay();
-            navigate("/");
-        }
+        setShowFinishModal(true);
+    };
+
+    const confirmFinish = () => {
+        completeActiveRoutineDay();
+        navigate("/");
     };
 
     return (
@@ -121,6 +125,37 @@ export default function ActiveWorkout() {
                     Finish Workout
                 </button>
             </div>
+
+            {/* Confirmation Modal */}
+            {showFinishModal && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-6">
+                    <div className="bg-surface border border-white/10 p-6 rounded-2xl w-full max-w-sm space-y-4 shadow-2xl animate-in fade-in zoom-in-95">
+                        <div className="text-center space-y-2">
+                            <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center mx-auto text-red-500 mb-2">
+                                <Flag size={24} />
+                            </div>
+                            <h3 className="text-xl font-bold">End Workout?</h3>
+                            <p className="text-sm text-text-muted">
+                                Are you sure you want to finish this session? Progress is saved automatically.
+                            </p>
+                        </div>
+                        <div className="flex gap-3 pt-2">
+                            <button
+                                onClick={() => setShowFinishModal(false)}
+                                className="flex-1 py-3 rounded-xl font-bold bg-secondary hover:bg-white/10 transition-colors"
+                            >
+                                Keep Going
+                            </button>
+                            <button
+                                onClick={confirmFinish}
+                                className="flex-1 py-3 rounded-xl font-bold bg-red-500 text-white hover:bg-red-600 transition-colors shadow-lg shadow-red-500/20"
+                            >
+                                Finish
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

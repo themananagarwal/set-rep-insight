@@ -27,6 +27,7 @@ export type WorkoutSet = {
     exerciseId: string;
     weight: number;
     reps: number;
+    duration?: number; // Duration in seconds (for cardio/timed exercises)
     rpe?: number; // Rate of Perceived Exertion (1-10)
     completedAt: number;
 };
@@ -36,6 +37,7 @@ export type TargetSet = {
     type: "warmup" | "working" | "drop" | "failure";
     reps: string;    // "5", "8-12"
     weight?: string; // "100", "BW"
+    duration?: number; // Duration in seconds
     rpe?: string;    // "8", "8-9"
     notes?: string;
 };
