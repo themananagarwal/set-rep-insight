@@ -1,6 +1,7 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { Dumbbell, LayoutDashboard, History, User } from "lucide-react";
 import clsx from "clsx";
+import { ReloadPrompt } from "./ReloadPrompt";
 
 export function Layout() {
     const location = useLocation();
@@ -14,6 +15,7 @@ export function Layout() {
 
     return (
         <div className="min-h-screen bg-background text-text font-sans flex flex-col">
+            <ReloadPrompt />
             {/* Main Content Area */}
             <main className="flex-1 overflow-y-auto pb-24 safe-area-inset-top">
                 <div className="max-w-md mx-auto p-4 h-full">

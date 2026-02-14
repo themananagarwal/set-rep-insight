@@ -4,6 +4,7 @@ import { useTrainerStore } from "../lib/store";
 import { predictNextSet } from "../lib/ai";
 import type { WorkoutSet } from "../lib/types";
 import { RestTimer } from "../components/RestTimer";
+import { TimeInput } from "../components/TimeInput";
 import { CheckCircle, ChevronRight, Dumbbell, Flag, Timer } from "lucide-react";
 import clsx from "clsx";
 
@@ -439,33 +440,27 @@ export default function WorkoutSession() {
                                                         <div className="grid grid-cols-2 gap-3">
                                                             {/* Duration Input */}
                                                             <div>
-                                                                <label className="text-[10px] text-text-muted block mb-1">Duration (s)</label>
-                                                                <input
-                                                                    type="number"
+                                                                <TimeInput
+                                                                    label="Duration"
                                                                     value={set.duration}
-                                                                    onChange={(e) => {
-                                                                        const val = parseInt(e.target.value) || 0;
+                                                                    onChange={(val) => {
                                                                         const newPlan = [...cardioPlan];
                                                                         newPlan[index].duration = val;
                                                                         setCardioPlan(newPlan);
                                                                     }}
-                                                                    className="w-full bg-secondary rounded-lg p-2 text-sm font-bold text-center focus:outline-none focus:ring-2 focus:ring-primary/50"
                                                                 />
                                                             </div>
 
                                                             {/* Rest Input */}
                                                             <div>
-                                                                <label className="text-[10px] text-text-muted block mb-1">Rest (s)</label>
-                                                                <input
-                                                                    type="number"
+                                                                <TimeInput
+                                                                    label="Rest"
                                                                     value={set.rest}
-                                                                    onChange={(e) => {
-                                                                        const val = parseInt(e.target.value) || 0;
+                                                                    onChange={(val) => {
                                                                         const newPlan = [...cardioPlan];
                                                                         newPlan[index].rest = val;
                                                                         setCardioPlan(newPlan);
                                                                     }}
-                                                                    className="w-full bg-secondary rounded-lg p-2 text-sm font-bold text-center focus:outline-none focus:ring-2 focus:ring-primary/50"
                                                                 />
                                                             </div>
                                                         </div>
