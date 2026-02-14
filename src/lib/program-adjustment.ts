@@ -24,9 +24,12 @@ export interface ProgramChange {
 }
 
 export interface PlanPatch {
+    status: "ok";
     gapsFound: GapAnalysis;
     changes: ProgramChange[];
 }
+
+import { differenceInDays } from "date-fns";
 
 /**
  * 1. DETECT GAPS
@@ -55,12 +58,26 @@ export const analyzeGaps = (radarData: RadarDataPoint[]): GapAnalysis => {
  */
 export const generateProgramAdjustments = (
     radarData: RadarDataPoint[],
-    routine: Routine
-): PlanPatch => {
+    routine: Routine,
+    history: { completedAt: number }[]
+): PlanPatch | { status: "insufficient_data", daysCollected: number } => {
+
+    // 0. CHECK HISTORY DURATION
+    if (history.length > 0) {
+        const firstWorkout = history.reduce((min, h) => Math.min(min, h.completedAt), Date.now());
+        const daysCollected = differenceInDays(Date.now(), firstWorkout);
+
+        if (daysCollected < 14) {
+            return { status: "insufficient_data", daysCollected };
+        }
+    } else {
+        return { status: "insufficient_data", daysCollected: 0 };
+    }
+
     const gaps = analyzeGaps(radarData);
     const changes: ProgramChange[] = [];
 
-    if (gaps.weakAxes.length === 0) return { gapsFound: gaps, changes: [] };
+    if (gaps.weakAxes.length === 0) return { status: "ok", gapsFound: gaps, changes: [] };
 
     // Limit to top 2 weak axes to avoid overwhelming changes
     const targetAxes = gaps.weakAxes.slice(0, 2);
@@ -165,7 +182,9 @@ export const generateProgramAdjustments = (
         }
     });
 
-    return { gapsFound: gaps, changes };
+});
+
+return { status: "ok", gapsFound: gaps, changes };
 };
 
 // Helper: Pick an exercise not already in routine
