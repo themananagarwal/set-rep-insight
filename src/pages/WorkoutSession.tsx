@@ -4,7 +4,7 @@ import { useTrainerStore } from "../lib/store";
 import { predictNextSet } from "../lib/ai";
 import type { WorkoutSet } from "../lib/types";
 import { RestTimer } from "../components/RestTimer";
-import { TimeInput } from "../components/TimeInput";
+import { TimePicker } from "../components/TimePicker";
 import { CheckCircle, ChevronRight, Dumbbell, Flag, Timer } from "lucide-react";
 import clsx from "clsx";
 
@@ -440,8 +440,9 @@ export default function WorkoutSession() {
                                                         <div className="grid grid-cols-2 gap-3">
                                                             {/* Duration Input */}
                                                             <div>
-                                                                <TimeInput
+                                                                <TimePicker
                                                                     label="Duration"
+                                                                    type="work"
                                                                     value={set.duration}
                                                                     onChange={(val) => {
                                                                         const newPlan = [...cardioPlan];
@@ -453,8 +454,9 @@ export default function WorkoutSession() {
 
                                                             {/* Rest Input */}
                                                             <div>
-                                                                <TimeInput
+                                                                <TimePicker
                                                                     label="Rest"
+                                                                    type="rest"
                                                                     value={set.rest}
                                                                     onChange={(val) => {
                                                                         const newPlan = [...cardioPlan];
