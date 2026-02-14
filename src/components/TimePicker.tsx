@@ -123,20 +123,20 @@ function PickerDrawer({ initialValue, onSave, onClose, title, isWork }: {
     };
 
     return createPortal(
-        <div className="fixed inset-0 z-[999] flex items-end justify-center pointer-events-none">
+        <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 pointer-events-none">
             {/* Backdrop */}
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm pointer-events-auto" onClick={onClose} />
 
             {/* Drawer */}
-            <div className="bg-surface border-t border-white/10 w-full max-w-md rounded-t-3xl p-6 pb-10 pointer-events-auto animate-in slide-in-from-bottom duration-300">
+            <div className="bg-surface border border-white/10 w-full max-w-[320px] rounded-3xl p-6 pointer-events-auto animate-in zoom-in-95 duration-200 shadow-2xl shadow-black/50">
                 <div className="flex justify-between items-center mb-6">
-                    <button onClick={onClose} className="p-2 bg-secondary rounded-full text-text-muted">
+                    <button onClick={onClose} className="p-2 bg-secondary rounded-full text-text-muted hover:bg-white/10 transition-colors">
                         <X size={20} />
                     </button>
                     <h3 className="font-bold text-lg">{title}</h3>
                     <button
                         onClick={() => onSave((mins * 60) + secs)}
-                        className={clsx("p-2 rounded-full text-white", isWork ? "bg-primary" : "bg-orange-500")}
+                        className={clsx("p-2 rounded-full text-white shadow-lg", isWork ? "bg-primary shadow-primary/20" : "bg-orange-500 shadow-orange-500/20")}
                     >
                         <Check size={20} />
                     </button>
