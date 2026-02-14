@@ -228,6 +228,9 @@ export default function WorkoutSession() {
         }
     };
 
+    // -- COACHING STATE --
+    const [coachingRec, setCoachingRec] = useState<CoachingResult | null>(null);
+
     const handleLogSet = (silent = false, specificDuration?: number) => {
         const newSet: WorkoutSet = {
             id: Date.now().toString(36) + Math.random().toString(36).slice(2),
@@ -243,8 +246,29 @@ export default function WorkoutSession() {
         setSessionSets(prev => [...prev, newSet]);
 
         if (!isCardio && !silent) {
+            // Trigger Coaching
+            const result = getLoadCoaching(newSet, {
+                target: {
+                    rpeRange: [7, 9],
+                    repsRange: [8, 12]
+                },
+                config: { increment: 2.5 },
+                // Mock user state for now
+                userState: { pain: 0, soreness: 0, sleep: 7 }
+            });
+            setCoachingRec(result);
+
             triggerTimer(90, "Rest");
         }
+    };
+
+    const applyCoaching = () => {
+        if (!coachingRec) return;
+        setInputs(prev => ({
+            ...prev,
+            weight: coachingRec.nextWeight
+        }));
+        setCoachingRec(null);
     };
 
     const triggerTimer = (seconds: number, label: string) => {
@@ -339,6 +363,44 @@ export default function WorkoutSession() {
                     </p>
                 </div>
             </div>
+
+            {/* --- COACHING BANNER --- */}
+            {coachingRec && (
+                <div className="mb-6 animate-in slide-in-from-top-4 fade-in duration-300">
+                    <div className={clsx(
+                        "rounded-xl p-4 border border-l-4 shadow-lg",
+                        coachingRec.recommendation === "increase" ? "bg-emerald-500/10 border-emerald-500 border-l-emerald-500" :
+                            coachingRec.recommendation === "decrease" ? "bg-amber-500/10 border-amber-500 border-l-amber-500" :
+                                "bg-primary/5 border-primary border-l-primary"
+                    )}>
+                        <div className="flex justify-between items-start mb-2">
+                            <div>
+                                <h3 className="font-bold text-sm uppercase tracking-wider flex items-center gap-2">
+                                    {coachingRec.recommendation === "increase" ? "🚀 Increase Load" :
+                                        coachingRec.recommendation === "decrease" ? "📉 Reduce Load" :
+                                            "✅ Maintain Load"}
+                                </h3>
+                                <p className="text-xs text-text-muted mt-1">{coachingRec.reasoning}</p>
+                            </div>
+                            <div className="text-right">
+                                <div className="text-2xl font-bold font-mono">
+                                    {coachingRec.nextWeight}<span className="text-xs text-text-muted ml-0.5">kg</span>
+                                </div>
+                                <div className={clsx("text-xs font-bold", coachingRec.delta > 0 ? "text-emerald-500" : coachingRec.delta < 0 ? "text-amber-500" : "text-text-muted")}>
+                                    {coachingRec.delta > 0 ? `+${coachingRec.delta}` : coachingRec.delta} kg
+                                </div>
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={applyCoaching}
+                            className="w-full mt-2 py-2 bg-surface hover:bg-white/5 border border-white/10 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2"
+                        >
+                            Apply to Next Set
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* Input Form */}
             <div className="card space-y-5">
