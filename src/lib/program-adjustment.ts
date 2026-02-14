@@ -1,6 +1,6 @@
 import type { RadarDataPoint, RadarAxis } from "./radar-helpers";
-import type { Routine, TargetSet, WorkoutExercisePattern, WorkoutDay } from "./types";
-import { EXERCISE_LIBRARY, type ExerciseDef } from "./exercises";
+import type { Routine, WorkoutDay } from "./types";
+import { EXERCISE_LIBRARY } from "./exercises";
 
 export interface GapAnalysis {
     averageScore: number;
@@ -91,7 +91,7 @@ export const generateProgramAdjustments = (
         // 3. Add exercise or Increase sets
 
         let bestDayForIntervention: WorkoutDay | null = null;
-        let interventionType: "volume" | "Frequency" = "volume";
+
 
         // Find days that already have exercises for this axis
         const daysWithAxis = routine.days.filter(day => {

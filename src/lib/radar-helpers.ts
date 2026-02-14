@@ -1,6 +1,6 @@
 import type { WorkoutSet } from "./types";
 
-import { getExerciseContributions, type RadarAxis, type ExerciseDef } from "./exercises";
+import { getExerciseContributions, type RadarAxis } from "./exercises";
 
 export type { RadarAxis };
 

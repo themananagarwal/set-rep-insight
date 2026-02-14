@@ -4,7 +4,7 @@ import { useState } from "react";
 import { generateProgramAdjustments, type PlanPatch } from "../../lib/program-adjustment";
 import { useTrainerStore } from "../../lib/store"; // Access routine
 import { EXERCISE_LIBRARY } from "../../lib/exercises";
-import { ArrowRight, Sparkles, TrendingUp } from "lucide-react";
+import { Sparkles, TrendingUp } from "lucide-react";
 
 interface StrengthRadarProps {
     data: RadarDataPoint[];

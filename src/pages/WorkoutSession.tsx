@@ -6,7 +6,7 @@ import { getLoadCoaching, type CoachingResult } from "../lib/coaching"; // Impor
 import type { WorkoutSet } from "../lib/types";
 import { RestTimer } from "../components/RestTimer";
 import { TimePicker } from "../components/TimePicker";
-import { CheckCircle, ChevronRight, Dumbbell, Flag, Timer } from "lucide-react";
+import { ChevronRight, Flag, Timer } from "lucide-react";
 import clsx from "clsx";
 
 export default function WorkoutSession() {
@@ -285,8 +285,9 @@ export default function WorkoutSession() {
         navigate("/workout/active");
     };
 
-    const currentSetCount = sessionSets.filter(s => s.exerciseId === activeExerciseId).length;
-    const targetSets = plannedExercise?.targetSets || 3;
+
+    // const currentSetCount = sessionSets.filter(s => s.exerciseId === activeExerciseId).length;
+    // const targetSets = plannedExercise?.targetSets || 3;
 
     // Helper to format time (MM:SS)
     const formatTime = (seconds: number) => {

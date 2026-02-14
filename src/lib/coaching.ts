@@ -1,4 +1,4 @@
-import type { WorkoutSet, UserProfile } from "./types";
+import type { WorkoutSet } from "./types";
 
 export type CoachingRecommendation = "increase" | "decrease" | "maintain" | "substitute";
 
@@ -79,7 +79,7 @@ export function getLoadCoaching(
 
     if ((userState?.soreness && userState.soreness >= 7) || (userState?.sleep && userState.sleep <= 3)) {
         // Recovery Mode: Capped at Maintain/Decrease
-        const targetRPE = target.rpeRange[0] - 1; // Aim below normal range
+
         // Proceed with logic, but enforce "No Increase" later
     }
 

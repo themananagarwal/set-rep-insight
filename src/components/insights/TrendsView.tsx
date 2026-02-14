@@ -4,7 +4,7 @@ import { useMemo, useState, useEffect } from "react";
 import { getExerciseProgress, getMuscleHeatmapData, getPersonalRecords, type InsightTimeRange } from "../../lib/insight-helpers";
 import { calculateStrengthRadar } from "../../lib/radar-helpers";
 import { CartesianGrid, Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { Dumbbell, Search, ChevronDown, Radar, Trophy, Activity, TrendingUp, Filter } from "lucide-react";
+import { Search, ChevronDown, Radar, Activity, TrendingUp } from "lucide-react";
 import clsx from "clsx";
 import { BodyHeatmap } from "./BodyHeatmap";
 import { StrengthRadar } from "./StrengthRadar";

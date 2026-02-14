@@ -36,7 +36,12 @@ export const useTrainerStore = create<TrainerState>()(
         (set, get) => ({
             user: null,
             history: [],
-            exercises: ALL_EXERCISES,
+            exercises: ALL_EXERCISES.map(def => ({
+                id: def.id,
+                name: def.name,
+                muscle: def.primaryAxis,
+                type: (def.tags.includes("compound") ? "compound" : "isolation") as "compound" | "isolation"
+            })),
             routines: [],
             activeRoutineId: null,
 
@@ -114,7 +119,12 @@ export const useTrainerStore = create<TrainerState>()(
                 if (missing.length === 0) return {};
 
                 return {
-                    exercises: [...state.exercises, ...missing]
+                    exercises: [...state.exercises, ...missing.map(def => ({
+                        id: def.id,
+                        name: def.name,
+                        muscle: def.primaryAxis,
+                        type: (def.tags.includes("compound") ? "compound" : "isolation") as "compound" | "isolation"
+                    }))]
                 };
             }),
 
