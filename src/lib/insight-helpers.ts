@@ -5,21 +5,32 @@ export type ProgressPoint = {
     date: number; // timestamp
     weight: number;
     reps: number;
-    volume: number; // weight * reps
+    volume: number; // Daily Total Volume
     rpe: number;
+    e1rm: number; // Calculated e1RM
 };
 
 export type MuscleHeatmapData = {
     [muscle: string]: number; // 0 to 1 (intensity/frequency)
 };
 
+export type InsightTimeRange = "1M" | "3M" | "6M" | "ALL";
+
 /**
  * Extracts progress data for a specific exercise over time.
- * For each day, it picks the "best" set (highest weight, then highest reps).
+ * Supports filtering by time range.
  */
-export const getExerciseProgress = (history: WorkoutSet[], exerciseId: string): ProgressPoint[] => {
+export const getExerciseProgress = (history: WorkoutSet[], exerciseId: string, timeRange: InsightTimeRange = "ALL"): ProgressPoint[] => {
+
+    // Filter by Time Range
+    let cutoff = new Date(0); // ALL
+    const now = new Date();
+    if (timeRange === "1M") cutoff = subDays(now, 30);
+    if (timeRange === "3M") cutoff = subDays(now, 90);
+    if (timeRange === "6M") cutoff = subDays(now, 180);
+
     const exerciseSets = history
-        .filter(s => s.exerciseId === exerciseId)
+        .filter(s => s.exerciseId === exerciseId && isAfter(new Date(s.completedAt), cutoff))
         .sort((a, b) => a.completedAt - b.completedAt);
 
     if (exerciseSets.length === 0) return [];
@@ -34,25 +45,63 @@ export const getExerciseProgress = (history: WorkoutSet[], exerciseId: string): 
         groupedByDay[dateKey].push(set);
     });
 
-    // Find best set for each day
+    // Find best set for each day based on "strength" (e1rm) mostly, 
+    // but the graph might want different things. 
+    // We store all metrics in the point, so we can pick later.
     Object.values(groupedByDay).forEach(daySets => {
-        // Sort by weight (desc), then reps (desc)
+        // Calculate daily totals for volume
+        const dailyVolume = daySets.reduce((acc, s) => acc + (s.weight * s.reps), 0);
+
+        // Best Set (Highest e1RM)
         daySets.sort((a, b) => {
-            if (b.weight !== a.weight) return b.weight - a.weight;
-            return b.reps - a.reps;
+            const e1rmA = a.weight * (1 + a.reps / 30);
+            const e1rmB = b.weight * (1 + b.reps / 30);
+            return e1rmB - e1rmA;
         });
 
         const bestSet = daySets[0];
+        const e1rm = bestSet.weight * (1 + bestSet.reps / 30);
+
         progress.push({
             date: bestSet.completedAt,
             weight: bestSet.weight,
             reps: bestSet.reps,
-            volume: bestSet.weight * bestSet.reps,
+            volume: dailyVolume, // Total daily volume
+            e1rm: e1rm,
             rpe: bestSet.rpe || 0
         });
     });
 
     return progress.sort((a, b) => a.date - b.date);
+};
+
+export type PersonalRecord = {
+    exerciseId: string;
+    metric: "Weight" | "Volume" | "e1RM";
+    value: number;
+    date: number;
+};
+
+export const getPersonalRecords = (history: WorkoutSet[]): PersonalRecord[] => {
+    // We only care about main lifts + some key ones
+    // Or scan all history? Scan all for MVP.
+    const bests: Record<string, PersonalRecord> = {};
+
+    history.forEach(set => {
+        const e1rm = set.weight * (1 + set.reps / 30);
+
+        // Check e1RM PR
+        if (!bests[set.exerciseId] || e1rm > bests[set.exerciseId].value) {
+            bests[set.exerciseId] = {
+                exerciseId: set.exerciseId,
+                metric: "e1RM",
+                value: e1rm,
+                date: set.completedAt
+            };
+        }
+    });
+
+    return Object.values(bests).sort((a, b) => b.date - a.date); // Most recent PRs first? Or highest value?
 };
 
 /**

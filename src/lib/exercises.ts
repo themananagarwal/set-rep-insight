@@ -235,3 +235,4 @@ export const getExerciseContributions = (exerciseId: string) => {
 
     return contribs;
 };
+export const ALL_EXERCISES = Object.values(EXERCISE_LIBRARY);

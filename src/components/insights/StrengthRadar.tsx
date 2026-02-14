@@ -1,4 +1,5 @@
-// ... (imports remain)
+import { ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Tooltip } from "recharts";
+import type { RadarDataPoint } from "../../lib/radar-helpers";
 import { useState } from "react";
 import { generateProgramAdjustments, type PlanPatch } from "../../lib/program-adjustment";
 import { useTrainerStore } from "../../lib/store"; // Access routine
