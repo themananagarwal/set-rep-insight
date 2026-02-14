@@ -327,42 +327,7 @@ export default function WorkoutSession() {
                 </button>
             </div>
 
-            {/* AI Coaching Card - Simplified for Cardio */}
-            <div className="bg-surface border border-white/5 p-5 rounded-2xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-4 opacity-10">
-                    <Dumbbell size={64} />
-                </div>
-                <div className="relative z-10">
-                    <div className="flex justify-between items-start mb-2">
-                        <div className="flex items-center gap-2 text-primary font-bold text-sm">
-                            <CheckCircle size={16} /> Target
-                        </div>
-                        {currentSetCount >= targetSets && (
-                            <span className="bg-green-500/20 text-green-400 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase">
-                                Target Volume Met
-                            </span>
-                        )}
-                    </div>
 
-                    {!isCardio ? (
-                        <div className="flex items-baseline gap-1">
-                            <span className="text-4xl font-bold">{prediction.suggestedWeight}</span>
-                            <span className="text-sm text-text-muted mr-3">kg</span>
-
-                            <span className="text-4xl font-bold">{prediction.suggestedReps}</span>
-                            <span className="text-sm text-text-muted">reps</span>
-                        </div>
-                    ) : (
-                        <div className="flex items-baseline gap-1">
-                            <span className="text-4xl font-bold">Duration</span>
-                        </div>
-                    )}
-
-                    <p className="text-xs text-text-muted mt-3 pt-3 border-t border-white/5">
-                        <span className="font-semibold text-primary">Coach:</span> {isCardio ? "Maintain a steady pace." : prediction.reasoning}
-                    </p>
-                </div>
-            </div>
 
             {/* --- COACHING BANNER --- */}
             {coachingRec && (
