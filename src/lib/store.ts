@@ -107,76 +107,82 @@ export const useTrainerStore = create<TrainerState>()(
                 return predictNextSet(exerciseId, history, user);
             },
 
-            return {
-                exercises: [...state.exercises, ...missing]
-            };
-        }),
+            syncExercises: () => set((state) => {
+                const currentIds = new Set(state.exercises.map(e => e.id));
+                const missing = ALL_EXERCISES.filter(e => !currentIds.has(e.id));
 
-        applySchedulePatch: (patch) => set((state) => {
-            if (!state.activeRoutineId || patch.status !== "ok") return {};
+                if (missing.length === 0) return {};
 
-            const routine = state.routines.find(r => r.id === state.activeRoutineId);
-            if (!routine) return {};
+                return {
+                    exercises: [...state.exercises, ...missing]
+                };
+            }),
 
-            // Deep copy to mutate
-            const updatedDays = routine.days.map(d => ({
-                ...d,
-                exercises: d.exercises.map(e => ({ ...e, sets: [...e.sets] }))
-            }));
+            applySchedulePatch: (patch) => set((state) => {
+                if (!state.activeRoutineId || patch.status !== "ok") return {};
 
-            patch.changes.forEach(change => {
-                const day = updatedDays.find(d => d.id === change.dayId);
-                if (!day) return;
+                const routine = state.routines.find(r => r.id === state.activeRoutineId);
+                if (!routine) return {};
 
-                if (change.action === "add_exercise" && change.exerciseId) {
-                    // Add new exercise
-                    day.exercises.push({
-                        exerciseId: change.exerciseId,
-                        targetSets: change.targetSets || 3, // Deprecated
-                        targetReps: 10, // Deprecated
-                        sets: Array(change.targetSets || 3).fill({
-                            id: Date.now().toString() + Math.random(),
-                            type: "working",
-                            reps: "8-12",
-                            rpe: "8"
-                        })
-                    });
-                } else if (change.action === "increase_sets" && change.exerciseId) {
-                    // Find exercise and add sets
-                    const ex = day.exercises.find(e => e.exerciseId === change.exerciseId);
-                    if (ex) {
-                        const newSets = Array(change.targetSets || 1).fill({
-                            id: Date.now().toString() + Math.random(),
-                            type: "working",
-                            reps: "8-12",
-                            rpe: "8"
+                // Deep copy to mutate
+                const updatedDays = routine.days.map(d => ({
+                    ...d,
+                    exercises: d.exercises.map(e => ({ ...e, sets: [...e.sets] }))
+                }));
+
+                patch.changes.forEach(change => {
+                    const day = updatedDays.find(d => d.id === change.dayId);
+                    if (!day) return;
+
+                    if (change.action === "add_exercise" && change.exerciseId) {
+                        // Add new exercise
+                        day.exercises.push({
+                            exerciseId: change.exerciseId,
+                            targetSets: change.targetSets || 3, // Deprecated
+                            targetReps: 10, // Deprecated
+                            sets: Array(change.targetSets || 3).fill({
+                                id: Date.now().toString() + Math.random(),
+                                type: "working",
+                                reps: "8-12",
+                                rpe: "8"
+                            })
                         });
-                        ex.sets.push(...newSets);
-                        ex.targetSets = (ex.targetSets || 0) + (change.targetSets || 1);
+                    } else if (change.action === "increase_sets" && change.exerciseId) {
+                        // Find exercise and add sets
+                        const ex = day.exercises.find(e => e.exerciseId === change.exerciseId);
+                        if (ex) {
+                            const newSets = Array(change.targetSets || 1).fill({
+                                id: Date.now().toString() + Math.random(),
+                                type: "working",
+                                reps: "8-12",
+                                rpe: "8"
+                            });
+                            ex.sets.push(...newSets);
+                            ex.targetSets = (ex.targetSets || 0) + (change.targetSets || 1);
+                        }
                     }
-                }
-            });
+                });
 
-            const updatedRoutine = {
-                ...routine,
-                days: updatedDays,
-                lastModified: Date.now()
-            };
+                const updatedRoutine = {
+                    ...routine,
+                    days: updatedDays,
+                    lastModified: Date.now()
+                };
 
-            return {
-                routines: state.routines.map(r => r.id === routine.id ? updatedRoutine : r)
-            };
-        })
+                return {
+                    routines: state.routines.map(r => r.id === routine.id ? updatedRoutine : r)
+                };
+            })
         }),
-{
-    name: "pt_storage",
-        partialize: (state) => ({
-            user: state.user,
-            history: state.history,
-            exercises: state.exercises,
-            routines: state.routines,
-            activeRoutineId: state.activeRoutineId
-        }),
+        {
+            name: "pt_storage",
+            partialize: (state) => ({
+                user: state.user,
+                history: state.history,
+                exercises: state.exercises,
+                routines: state.routines,
+                activeRoutineId: state.activeRoutineId
+            }),
         }
     )
 );

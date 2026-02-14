@@ -182,9 +182,7 @@ export const generateProgramAdjustments = (
         }
     });
 
-});
-
-return { status: "ok", gapsFound: gaps, changes };
+    return { status: "ok", gapsFound: gaps, changes };
 };
 
 // Helper: Pick an exercise not already in routine

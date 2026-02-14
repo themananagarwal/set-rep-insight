@@ -36,7 +36,7 @@ const getTier = (score: number): string => {
 };
 
 export const calculateStrengthRadar = (history: WorkoutSet[], userWeight: number = 75): RadarDataPoint[] => {
-    if (!history.length) return [];
+    // if (!history.length) return []; // REMOVED: Always return data for chart visibility
 
     const now = Date.now();
     const eightWeeksAgo = now - (8 * 7 * 24 * 60 * 60 * 1000);

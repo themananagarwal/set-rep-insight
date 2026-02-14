@@ -79,7 +79,7 @@ export function TrendsView() {
 
             {/* --- VIEW: OVERVIEW --- */}
             {activeTab === "Overview" && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in zoom-in-95 duration-300">
+                <div className="grid grid-cols-1 gap-6 animate-in zoom-in-95 duration-300">
 
                     {/* Radar Card */}
                     <div className="bg-surface/50 backdrop-blur-xl border border-white/10 rounded-3xl p-6 relative overflow-hidden shadow-2xl">
