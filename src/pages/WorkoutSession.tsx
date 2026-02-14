@@ -6,7 +6,7 @@ import { getLoadCoaching, type CoachingResult } from "../lib/coaching"; // Impor
 import type { WorkoutSet } from "../lib/types";
 import { RestTimer } from "../components/RestTimer";
 import { TimePicker } from "../components/TimePicker";
-import { ChevronRight, Flag, Timer } from "lucide-react";
+import { Timer } from "lucide-react";
 import clsx from "clsx";
 
 export default function WorkoutSession() {
@@ -277,9 +277,7 @@ export default function WorkoutSession() {
         setIsTimerOpen(true);
     };
 
-    const handleNextExercise = () => {
-        navigate("/workout/active");
-    };
+
 
     const handleFinishWorkout = () => {
         navigate("/workout/active");
@@ -311,288 +309,214 @@ export default function WorkoutSession() {
         <div className="pt-6 pb-32 space-y-6">
 
             {/* Header / Progress */}
-            <div className="flex justify-between items-start">
+            <div className="flex justify-between items-start border-b border-white/5 pb-6">
                 <div>
-                    <h2 className="text-sm font-bold text-primary tracking-wider uppercase mb-1">
-                        {activeDay?.name || "Free Workout"}
+                    <h2 className="text-[10px] font-bold text-primary tracking-[0.2em] uppercase mb-2">
+                        {activeDay?.name || "Free Session"}
                     </h2>
-                    <h1 className="text-2xl font-bold leading-none max-w-[200px]">
-                        {activeExerciseData?.name || "Unknown Exercise"}
+                    <h1 className="text-3xl md:text-4xl font-black tracking-tight text-white leading-none max-w-[250px]">
+                        {activeExerciseData?.name || "Unknown"}
                     </h1>
                 </div>
                 <button
                     onClick={handleFinishWorkout}
-                    className="bg-secondary/50 p-2 rounded-full text-xs font-bold text-text-muted hover:bg-red-500/20 hover:text-red-400 transition-colors flex items-center gap-1"
+                    className="text-[10px] uppercase font-bold text-red-500 tracking-widest border border-red-500/20 px-4 py-2 rounded bg-red-500/5 hover:bg-red-500/10 transition-colors"
                 >
-                    <Flag size={14} /> End
+                    End
                 </button>
             </div>
 
-
-
             {/* --- COACHING BANNER --- */}
             {coachingRec && (
-                <div className="mb-6 animate-in slide-in-from-top-4 fade-in duration-300">
+                <div className="animate-in slide-in-from-top-4 fade-in duration-300">
                     <div className={clsx(
-                        "rounded-xl p-4 border border-l-4 shadow-lg",
-                        coachingRec.recommendation === "increase" ? "bg-emerald-500/10 border-emerald-500 border-l-emerald-500" :
-                            coachingRec.recommendation === "decrease" ? "bg-amber-500/10 border-amber-500 border-l-amber-500" :
+                        "rounded-lg p-5 border border-l-4 shadow-2xl backdrop-blur-md",
+                        coachingRec.recommendation === "increase" ? "bg-emerald-900/10 border-emerald-500 border-l-emerald-500" :
+                            coachingRec.recommendation === "decrease" ? "bg-amber-900/10 border-amber-500 border-l-amber-500" :
                                 "bg-primary/5 border-primary border-l-primary"
                     )}>
-                        <div className="flex justify-between items-start mb-2">
-                            <div>
-                                <h3 className="font-bold text-sm uppercase tracking-wider flex items-center gap-2">
-                                    {coachingRec.recommendation === "increase" ? "🚀 Increase Load" :
-                                        coachingRec.recommendation === "decrease" ? "📉 Reduce Load" :
-                                            "✅ Maintain Load"}
-                                </h3>
-                                <p className="text-xs text-text-muted mt-1">{coachingRec.reasoning}</p>
-                            </div>
-                            <div className="text-right">
-                                <div className="text-2xl font-bold font-mono">
-                                    {coachingRec.nextWeight}<span className="text-xs text-text-muted ml-0.5">kg</span>
-                                </div>
-                                <div className={clsx("text-xs font-bold", coachingRec.delta > 0 ? "text-emerald-500" : coachingRec.delta < 0 ? "text-amber-500" : "text-text-muted")}>
-                                    {coachingRec.delta > 0 ? `+${coachingRec.delta}` : coachingRec.delta} kg
-                                </div>
+                        <div className="flex justify-between items-center mb-3">
+                            <h3 className="font-bold text-xs uppercase tracking-widest flex items-center gap-2 text-white">
+                                {coachingRec.recommendation === "increase" ? "Recommendation: Increase Load" :
+                                    coachingRec.recommendation === "decrease" ? "Recommendation: Deload" :
+                                        "Recommendation: Maintain"}
+                            </h3>
+                            <div className="text-2xl font-black text-white">
+                                {coachingRec.nextWeight}<span className="text-xs text-text-muted ml-0.5 font-sans">kg</span>
                             </div>
                         </div>
+                        <p className="text-xs text-text-muted font-medium mb-4 leading-relaxed opacity-80">{coachingRec.reasoning}</p>
 
                         <button
                             onClick={applyCoaching}
-                            className="w-full mt-2 py-2 bg-surface hover:bg-white/5 border border-white/10 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2"
+                            className="w-full py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-sm text-xs font-bold uppercase tracking-widest transition-colors"
                         >
-                            Apply to Next Set
+                            Apply
                         </button>
                     </div>
                 </div>
             )}
 
             {/* Input Form */}
-            <div className="card space-y-5">
+            <div className="space-y-8">
 
                 {isCardio ? (
-                    // --- CARDIO UI ---
+                    // --- CARDIO UI (Keep existing logic but style update) ---
                     <div className="space-y-6">
                         {isCardioTimerRunning ? (
-                            <div className="text-center py-8 space-y-4">
-                                <span className="inline-block px-3 py-1 bg-primary/10 text-primary rounded-full text-xs font-bold uppercase tracking-wider mb-2">
-                                    {cardioMode === 'open'
-                                        ? "Free Mode"
-                                        : (isCardioResting ? "Resting" : `Set ${currentCardioSetIndex + 1} / ${cardioPlan.length}`)
-                                    }
+                            <div className="text-center py-12 space-y-6 bg-surface/30 rounded-3xl border border-white/5">
+                                <span className="inline-block px-4 py-1.5 bg-primary/10 text-primary rounded-full text-[10px] font-bold uppercase tracking-[0.2em]">
+                                    {cardioMode === 'open' ? "Free Flow" : (isCardioResting ? "Rest Period" : `Interval ${currentCardioSetIndex + 1}/${cardioPlan.length}`)}
                                 </span>
                                 <div className={clsx(
-                                    "font-mono font-bold animate-pulse flex items-baseline justify-center",
-                                    isCardioResting ? "text-text-muted text-6xl" : "text-primary text-7xl tracking-tighter" // Bigger for sporty feel
+                                    "font-mono font-black tabular-nums tracking-tighter flex items-baseline justify-center",
+                                    isCardioResting ? "text-text-muted text-7xl" : "text-white text-8xl"
                                 )}>
                                     {cardioMode === 'open' ? (
                                         <>
                                             {formatStopwatch(openModeDuration).main}
-                                            <span className="text-4xl text-primary/70 ml-1 font-medium w-[70px] text-left">
+                                            <span className="text-4xl text-white/30 ml-2 font-bold w-[80px] text-left">
                                                 {formatStopwatch(openModeDuration).sub}
                                             </span>
                                         </>
-                                    ) : (
-                                        formatTime(cardioTimeLeft)
-                                    )}
+                                    ) : formatTime(cardioTimeLeft)}
                                 </div>
-                                <p className="text-text-muted text-sm uppercase tracking-widest mt-1">
-                                    {cardioMode === 'open'
-                                        ? "Stopwatch"
-                                        : (isCardioResting ? "Next set starts in..." : "Remaining")
-                                    }
-                                </p>
                                 <button
                                     onClick={handleStopCardioTimer}
-                                    className={clsx(
-                                        "btn w-full",
-                                        cardioMode === 'open' ? "bg-green-600 hover:bg-green-500 text-white" : "bg-red-500/10 text-red-500"
-                                    )}
+                                    className="px-8 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded text-xs font-bold uppercase tracking-widest text-red-400"
                                 >
-                                    {cardioMode === 'open' ? "Finish & Log" : "Pause / Stop"}
+                                    {cardioMode === 'open' ? "Stop" : "Pause"}
                                 </button>
                             </div>
                         ) : (
-                            <>
-                                {/* Mode Selection */}
-                                <div className="flex bg-secondary p-1 rounded-xl mb-4">
-                                    <button
-                                        onClick={() => setCardioMode('structured')}
-                                        className={clsx(
-                                            "flex-1 py-2 text-xs font-bold rounded-lg transition-all",
-                                            cardioMode === 'structured' ? "bg-primary text-white shadow" : "text-text-muted hover:text-white"
-                                        )}
-                                    >
-                                        Structured Plan
-                                    </button>
-                                    <button
-                                        onClick={() => setCardioMode('open')}
-                                        className={clsx(
-                                            "flex-1 py-2 text-xs font-bold rounded-lg transition-all",
-                                            cardioMode === 'open' ? "bg-primary text-white shadow" : "text-text-muted hover:text-white"
-                                        )}
-                                    >
-                                        Free Flow
-                                    </button>
+                            // Cardio Setup
+                            <div className="bg-surface/30 rounded-3xl p-6 border border-white/5">
+                                <div className="flex bg-black/20 p-1 rounded-lg mb-6 sticky top-0">
+                                    <button onClick={() => setCardioMode('structured')} className={clsx("flex-1 py-3 text-[10px] uppercase tracking-wider font-bold rounded-md transition-all", cardioMode === 'structured' ? "bg-primary text-white shadow" : "text-text-muted hover:text-white")}>Structured</button>
+                                    <button onClick={() => setCardioMode('open')} className={clsx("flex-1 py-3 text-[10px] uppercase tracking-wider font-bold rounded-md transition-all", cardioMode === 'open' ? "bg-primary text-white shadow" : "text-text-muted hover:text-white")}>Free Flow</button>
                                 </div>
 
                                 {cardioMode === 'structured' ? (
-                                    <>
-                                        {/* Plan Configuration Table */}
-                                        <div className="space-y-3">
-                                            <div className="flex justify-between items-center px-1">
-                                                <h3 className="text-xs font-bold text-text-muted uppercase tracking-wider">Planned Sets</h3>
-                                                <button
-                                                    onClick={() => setCardioPlan([...cardioPlan, { id: Date.now().toString(), duration: 60, rest: 30 }])}
-                                                    className="text-primary text-xs font-bold flex items-center gap-1 hover:underline"
-                                                >
-                                                    + Add Set
-                                                </button>
-                                            </div>
-
-                                            <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
-                                                {cardioPlan.map((set, index) => (
-                                                    <div key={set.id} className="bg-background border border-white/5 rounded-xl p-3 flex flex-col gap-2">
-                                                        <div className="flex justify-between items-center">
-                                                            <span className="font-bold text-sm text-primary">Set {index + 1}</span>
-                                                            {cardioPlan.length > 1 && (
-                                                                <button
-                                                                    onClick={() => setCardioPlan(cardioPlan.filter((_, i) => i !== index))}
-                                                                    className="text-red-400 text-xs hover:bg-white/5 p-1 rounded"
-                                                                >
-                                                                    Remove
-                                                                </button>
-                                                            )}
-                                                        </div>
-
-                                                        <div className="grid grid-cols-2 gap-3">
-                                                            {/* Duration Input */}
-                                                            <div>
-                                                                <TimePicker
-                                                                    label="Duration"
-                                                                    type="work"
-                                                                    value={set.duration}
-                                                                    onChange={(val) => {
-                                                                        const newPlan = [...cardioPlan];
-                                                                        newPlan[index].duration = val;
-                                                                        setCardioPlan(newPlan);
-                                                                    }}
-                                                                />
-                                                            </div>
-
-                                                            {/* Rest Input */}
-                                                            <div>
-                                                                <TimePicker
-                                                                    label="Rest"
-                                                                    type="rest"
-                                                                    value={set.rest}
-                                                                    onChange={(val) => {
-                                                                        const newPlan = [...cardioPlan];
-                                                                        newPlan[index].rest = val;
-                                                                        setCardioPlan(newPlan);
-                                                                    }}
-                                                                />
-                                                            </div>
-                                                        </div>
+                                    <div className="space-y-4 mb-6">
+                                        <div className="flex justify-between items-center px-1">
+                                            <h3 className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Interval Configuration</h3>
+                                            <button onClick={() => setCardioPlan([...cardioPlan, { id: Date.now().toString(), duration: 60, rest: 30 }])} className="text-primary text-[10px] font-bold uppercase tracking-wider hover:text-primary/80 transition-colors">+ Add Interval</button>
+                                        </div>
+                                        <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
+                                            {cardioPlan.map((set, index) => (
+                                                <div key={set.id} className="bg-black/20 border border-white/5 rounded-xl p-4 flex flex-col gap-4">
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="font-bold text-xs text-white/50 uppercase tracking-wider">Interval {index + 1}</span>
+                                                        {cardioPlan.length > 1 && (
+                                                            <button onClick={() => setCardioPlan(cardioPlan.filter((_, i) => i !== index))} className="text-red-400 text-[10px] font-bold uppercase tracking-wider hover:text-red-300">Remove</button>
+                                                        )}
                                                     </div>
-                                                ))}
-                                            </div>
+                                                    <div className="grid grid-cols-2 gap-4">
+                                                        <TimePicker label="Work" type="work" value={set.duration} onChange={(val) => { const newPlan = [...cardioPlan]; newPlan[index].duration = val; setCardioPlan(newPlan); }} />
+                                                        <TimePicker label="Rest" type="rest" value={set.rest} onChange={(val) => { const newPlan = [...cardioPlan]; newPlan[index].rest = val; setCardioPlan(newPlan); }} />
+                                                    </div>
+                                                </div>
+                                            ))}
                                         </div>
-
-                                        <button
-                                            onClick={handleStartCardioSession}
-                                            className="btn w-full py-6 text-xl flex items-center justify-center gap-2 bg-primary text-white shadow-xl shadow-primary/20 mt-4"
-                                        >
-                                            <Timer size={24} /> Start Routine ({cardioPlan.length} Sets)
-                                        </button>
-                                    </>
+                                    </div>
                                 ) : (
-                                    // -- FREE FLOW UI --
-                                    <div className="text-center py-10 space-y-6">
-                                        <div className="w-24 h-24 bg-secondary/50 rounded-full flex items-center justify-center mx-auto text-primary">
-                                            <Timer size={48} />
-                                        </div>
-                                        <div>
-                                            <h3 className="text-xl font-bold mb-2">Free Flow Mode</h3>
-                                            <p className="text-sm text-text-muted max-w-xs mx-auto">
-                                                Start the timer and go as long as you want. Click "Finish" when you're done to log your time.
-                                            </p>
-                                        </div>
-                                        <button
-                                            onClick={handleStartCardioSession}
-                                            className="btn w-full py-6 text-xl flex items-center justify-center gap-2 bg-primary text-white shadow-xl shadow-primary/20"
-                                        >
-                                            <Timer size={24} /> Start Stopwatch
-                                        </button>
+                                    <div className="text-center py-12 mb-6 border border-dashed border-white/10 rounded-xl">
+                                        <Timer className="mx-auto text-white/20 mb-4" size={48} />
+                                        <p className="text-xs text-text-muted uppercase tracking-wider">Open Ended Session</p>
                                     </div>
                                 )}
-                                <div className="text-center mt-4">
-                                    <p className="text-xs text-text-muted">Voice guidance enabled.</p>
-                                </div>
-                            </>
+
+                                <button onClick={handleStartCardioSession} className="w-full py-6 bg-primary hover:bg-primary/90 text-white font-black uppercase tracking-[0.15em] text-lg rounded-xl shadow-[0_0_20px_rgba(99,102,241,0.3)] transition-all flex items-center justify-center gap-3">
+                                    <Timer size={20} />
+                                    <span>Start Session</span>
+                                </button>
+                            </div>
                         )}
                     </div>
                 ) : (
                     // --- STRENGTH UI ---
                     <>
-                        <div className="grid grid-cols-2 gap-6">
+                        {/* Set Progress Indicator */}
+                        <div className="bg-surface border border-white/5 rounded-2xl p-4 mb-2 flex items-center justify-between">
+                            <div className="space-y-1">
+                                <span className={clsx(
+                                    "text-[10px] font-bold uppercase tracking-widest block",
+                                    history.filter(h => h.exerciseId === activeExerciseId && h.completedAt > Date.now() - 1000 * 60 * 60 * 12).length >= (plannedExercise?.targetSets || 3)
+                                        ? "text-emerald-500"
+                                        : "text-text-muted"
+                                )}>
+                                    Set Progress
+                                </span>
+                                <div className="flex items-baseline gap-1">
+                                    <span className={clsx(
+                                        "text-2xl font-black tabular-nums leading-none",
+                                        history.filter(h => h.exerciseId === activeExerciseId && h.completedAt > Date.now() - 1000 * 60 * 60 * 12).length >= (plannedExercise?.targetSets || 3) ? "text-emerald-500" : "text-white"
+                                    )}>
+                                        {history.filter(h => h.exerciseId === activeExerciseId && h.completedAt > Date.now() - 1000 * 60 * 60 * 12).length}
+                                    </span>
+                                    <span className="text-sm font-medium text-text-muted">
+                                        / {plannedExercise?.targetSets || 3}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Visual Progress Dots */}
+                            <div className="flex gap-1.5">
+                                {Array.from({ length: plannedExercise?.targetSets || 3 }).map((_, i) => {
+                                    const currentCount = history.filter(h => h.exerciseId === activeExerciseId && h.completedAt > Date.now() - 1000 * 60 * 60 * 12).length;
+                                    const isDone = i < currentCount;
+                                    return (
+                                        <div
+                                            key={i}
+                                            className={clsx(
+                                                "w-3 h-8 rounded-sm transition-all duration-300",
+                                                isDone ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" : "bg-white/10"
+                                            )}
+                                        />
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
                             {/* Weight Control */}
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider text-center block">Weight</label>
-                                <div className="flex items-center justify-between bg-background rounded-xl p-1 border border-white/5">
-                                    <button
-                                        onClick={() => setInputs(s => ({ ...s, weight: Math.max(0, s.weight - 2.5) }))}
-                                        className="w-10 h-10 flex items-center justify-center bg-secondary hover:bg-white/10 rounded-lg text-xl"
-                                    >
-                                        -
-                                    </button>
-                                    <span className="font-bold text-xl tabular-nums">{inputs.weight}</span>
-                                    <button
-                                        onClick={() => setInputs(s => ({ ...s, weight: s.weight + 2.5 }))}
-                                        className="w-10 h-10 flex items-center justify-center bg-secondary hover:bg-white/10 rounded-lg text-xl"
-                                    >
-                                        +
-                                    </button>
+                            <div className="bg-surface/50 border border-white/5 rounded-2xl p-6 flex flex-col items-center justify-center relative overflow-hidden group">
+                                <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                                <label className="text-[9px] font-bold text-text-muted uppercase tracking-[0.2em] mb-4">Load (kg)</label>
+                                <div className="flex items-center gap-6 z-10">
+                                    <button onClick={() => setInputs(s => ({ ...s, weight: Math.max(0, s.weight - 2.5) }))} className="w-12 h-12 flex items-center justify-center bg-black/40 hover:bg-primary/20 hover:text-primary rounded-full text-2xl transition-colors">-</button>
+                                    <span className="text-4xl font-black tracking-tighter text-white">{inputs.weight}</span>
+                                    <button onClick={() => setInputs(s => ({ ...s, weight: s.weight + 2.5 }))} className="w-12 h-12 flex items-center justify-center bg-black/40 hover:bg-primary/20 hover:text-primary rounded-full text-2xl transition-colors">+</button>
                                 </div>
                             </div>
 
                             {/* Reps Control */}
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider text-center block">Reps</label>
-                                <div className="flex items-center justify-between bg-background rounded-xl p-1 border border-white/5">
-                                    <button
-                                        onClick={() => setInputs(s => ({ ...s, reps: Math.max(0, s.reps - 1) }))}
-                                        className="w-10 h-10 flex items-center justify-center bg-secondary hover:bg-white/10 rounded-lg text-xl"
-                                    >
-                                        -
-                                    </button>
-                                    <span className="font-bold text-xl tabular-nums">{inputs.reps}</span>
-                                    <button
-                                        onClick={() => setInputs(s => ({ ...s, reps: s.reps + 1 }))}
-                                        className="w-10 h-10 flex items-center justify-center bg-secondary hover:bg-white/10 rounded-lg text-xl"
-                                    >
-                                        +
-                                    </button>
+                            <div className="bg-surface/50 border border-white/5 rounded-2xl p-6 flex flex-col items-center justify-center relative overflow-hidden group">
+                                <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                                <label className="text-[9px] font-bold text-text-muted uppercase tracking-[0.2em] mb-4">Reps</label>
+                                <div className="flex items-center gap-6 z-10">
+                                    <button onClick={() => setInputs(s => ({ ...s, reps: Math.max(0, s.reps - 1) }))} className="w-12 h-12 flex items-center justify-center bg-black/40 hover:bg-primary/20 hover:text-primary rounded-full text-2xl transition-colors">-</button>
+                                    <span className="text-4xl font-black tracking-tighter text-white">{inputs.reps}</span>
+                                    <button onClick={() => setInputs(s => ({ ...s, reps: s.reps + 1 }))} className="w-12 h-12 flex items-center justify-center bg-black/40 hover:bg-primary/20 hover:text-primary rounded-full text-2xl transition-colors">+</button>
                                 </div>
                             </div>
                         </div>
 
                         {/* RPE Selector */}
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider block text-center">
-                                Effort (RPE)
+                        <div className="space-y-4">
+                            <label className="text-[9px] font-bold text-text-muted uppercase tracking-[0.2em] block text-center">
+                                Intensity (RPE)
                             </label>
-                            <div className="flex justify-between gap-1">
+                            <div className="flex justify-between gap-2 p-1 bg-black/20 rounded-xl">
                                 {[7, 8, 9, 10].map(val => (
                                     <button
                                         key={val}
                                         onClick={() => setInputs(s => ({ ...s, rpe: val }))}
                                         className={clsx(
-                                            "flex-1 py-3 rounded-xl text-sm font-bold transition-all border",
+                                            "flex-1 py-4 rounded-lg text-lg font-bold transition-all",
                                             inputs.rpe === val
-                                                ? "bg-primary border-primary text-white shadow-lg shadow-primary/20"
-                                                : "bg-secondary border-transparent text-text-muted hover:bg-white/5"
+                                                ? "bg-primary text-white shadow-[0_0_15px_rgba(99,102,241,0.4)] scale-105"
+                                                : "text-text-muted hover:text-white hover:bg-white/5"
                                         )}
                                     >
                                         {val}
@@ -604,68 +528,61 @@ export default function WorkoutSession() {
                         {/* Primary Action: Log Set */}
                         <button
                             onClick={() => handleLogSet()}
-                            className="btn w-full py-4 text-base flex items-center justify-center gap-2"
+                            className="w-full h-20 bg-primary hover:bg-primary/90 text-white font-black uppercase tracking-[0.15em] text-lg rounded-xl shadow-[0_0_30px_rgba(99,102,241,0.3)] transition-all flex items-center justify-center gap-4 relative overflow-hidden group"
                         >
-                            <Timer size={20} /> End Set & Rest (90s)
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+                            <span className="relative z-10">Log Set</span>
                         </button>
                     </>
                 )}
             </div>
 
             {/* Session History List */}
-            <div className="space-y-2">
-                <h3 className="font-semibold text-text-muted text-xs uppercase tracking-wider ml-1 mb-2">History Today</h3>
-                {sessionSets
-                    .filter(s => s.exerciseId === activeExerciseId)
-                    .map((set, i) => (
-                        <div key={set.id} className="flex justify-between items-center p-3 bg-secondary/30 rounded-xl border border-white/5">
-                            <div className="flex gap-3 items-center">
-                                <span className="w-6 h-6 rounded-full bg-white/5 flex items-center justify-center text-xs text-text-muted font-mono">
-                                    {i + 1}
-                                </span>
-                                <span className="font-bold">
-                                    {set.duration ? (
-                                        <span>{formatTime(set.duration)}</span>
-                                    ) : (
-                                        <span>{set.weight}kg <span className="text-text-muted text-sm">x {set.reps}</span></span>
-                                    )}
-                                </span>
-                            </div>
-                            <div className="text-xs font-mono text-text-muted">
-                                {set.duration ? "Cardio" : `RPE ${set.rpe}`}
-                            </div>
+            <div className="mt-12">
+                <h3 className="font-bold text-text-muted text-[10px] uppercase tracking-[0.2em] mb-4 pl-1">Session Log</h3>
+                <div className="space-y-1">
+                    {sessionSets.length === 0 && (
+                        <div className="text-center py-8 border border-dashed border-white/10 rounded-xl">
+                            <p className="text-xs text-text-muted/50 uppercase tracking-widest">No data recorded</p>
                         </div>
-                    ))}
+                    )}
+                    {sessionSets
+                        .filter(s => s.exerciseId === activeExerciseId)
+                        .map((set, i) => (
+                            <div key={set.id} className="flex justify-between items-center p-4 bg-background border border-white/5 rounded-lg group hover:border-white/10 transition-colors">
+                                <div className="flex gap-4 items-center">
+                                    <span className="text-[10px] font-mono text-white/30">
+                                        {(i + 1).toString().padStart(2, '0')}
+                                    </span>
+                                    <span className="font-bold text-white text-lg">
+                                        {set.duration ? formatTime(set.duration) : `${set.weight}kg`}
+                                        {!set.duration && <span className="text-text-muted text-xs ml-2 font-medium">x {set.reps}</span>}
+                                    </span>
+                                </div>
+                                <div className="px-2 py-1 bg-white/5 rounded text-[10px] font-bold uppercase tracking-wider text-text-muted group-hover:text-white transition-colors">
+                                    {set.duration ? "CARDIO" : `RPE ${set.rpe}`}
+                                </div>
+                            </div>
+                        ))}
+                </div>
             </div>
 
             {/* Explicit Navigation (Main Content) */}
-            <div className="pt-4 pb-4">
-                {activeDay && exerciseIndex < activeDay.exercises.length - 1 ? (
-                    <button
-                        onClick={handleNextExercise}
-                        className="btn btn-secondary w-full py-4 flex items-center justify-center gap-2"
-                    >
-                        Next Exercise <ChevronRight size={16} />
-                    </button>
-                ) : (
-                    <button
-                        onClick={handleFinishWorkout}
-                        className="btn bg-green-600 hover:bg-green-500 text-white w-full py-4 flex items-center justify-center gap-2"
-                    >
-                        <Flag size={18} /> Finish Workout
-                    </button>
-                )}
+            <div className="hidden">
+                {/* Replaced by Bottom Actions */}
             </div>
 
-            {/* Global Actions (Fixed Bottom) - Hide during active cardio to prevent accidental exit */}
+            {/* Global Actions (Fixed Bottom) */}
             {!isCardioTimerRunning && (
-                <div className="fixed bottom-0 left-0 w-full bg-background/80 backdrop-blur-xl border-t border-white/10 p-4 flex gap-4 z-40">
-                    <button
-                        onClick={handleFinishWorkout}
-                        className="btn btn-primary flex-1 py-3 border-none"
-                    >
-                        <Flag size={18} className="mr-2" /> Finish Exercise
-                    </button>
+                <div className="fixed bottom-[90px] left-0 w-full px-6 z-30 pointer-events-none">
+                    <div className="max-w-md mx-auto pointer-events-auto">
+                        <button
+                            onClick={handleFinishWorkout}
+                            className="w-full py-4 border border-white/10 bg-surface/80 backdrop-blur-md hover:bg-white/10 rounded-2xl text-xs font-bold uppercase tracking-[0.2em] text-text-muted hover:text-white transition-colors shadow-lg"
+                        >
+                            Finish Exercise
+                        </button>
+                    </div>
                 </div>
             )}
 

@@ -4,7 +4,7 @@ import { useMemo, useState, useEffect } from "react";
 import { getExerciseProgress, getMuscleHeatmapData, getPersonalRecords, type InsightTimeRange } from "../../lib/insight-helpers";
 import { calculateStrengthRadar } from "../../lib/radar-helpers";
 import { CartesianGrid, Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { Search, ChevronDown, Radar, Activity, TrendingUp } from "lucide-react";
+import { ChevronDown, Radar, Activity } from "lucide-react";
 import clsx from "clsx";
 import { BodyHeatmap } from "./BodyHeatmap";
 import { StrengthRadar } from "./StrengthRadar";
@@ -59,53 +59,57 @@ export function TrendsView() {
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 pb-20">
 
-            {/* --- TOP NAVIGATION --- */}
-            <div className="flex p-1 bg-black/40 backdrop-blur-md rounded-2xl border border-white/5 sticky top-0 z-20">
-                {TABS.map(tab => (
+            {/* Minimalist Tech Tabs */}
+            <div className="flex items-center gap-8 border-b border-white/5 px-2 mb-6">
+                {["Overview", "Analysis", "Records"].map((tab) => (
                     <button
                         key={tab}
-                        onClick={() => setActiveTab(tab)}
+                        onClick={() => setActiveTab(tab as any)}
                         className={clsx(
-                            "flex-1 py-3 text-sm font-bold rounded-xl transition-all duration-300",
-                            activeTab === tab
-                                ? "bg-gradient-to-br from-primary to-fuchsia-600 text-white shadow-lg shadow-primary/20"
-                                : "text-text-muted hover:text-white hover:bg-white/5"
+                            "pb-3 text-[10px] uppercase tracking-[0.2em] font-bold transition-all duration-300 relative",
+                            activeTab === tab ? "text-primary" : "text-text-muted hover:text-white"
                         )}
                     >
                         {tab}
+                        {activeTab === tab && (
+                            <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-primary shadow-[0_0_8px_rgba(99,102,241,0.8)]" />
+                        )}
                     </button>
                 ))}
             </div>
 
-            {/* --- VIEW: OVERVIEW --- */}
+            {/* Content Area */}
             {activeTab === "Overview" && (
                 <div className="grid grid-cols-1 gap-6 animate-in zoom-in-95 duration-300">
-
                     {/* Radar Card */}
-                    <div className="bg-surface/50 backdrop-blur-xl border border-white/10 rounded-3xl p-6 relative overflow-hidden shadow-2xl">
-                        <div className="absolute top-0 right-0 p-4 opacity-5">
-                            <Radar size={120} />
+                    <div className="card relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 p-4 opacity-50 group-hover:opacity-100 transition-opacity">
+                            <Activity size={16} className="text-primary animate-pulse" />
                         </div>
-                        <h3 className="text-lg font-bold flex items-center gap-2 mb-4 relative z-10">
-                            <Activity className="text-fuchsia-400" size={20} /> Strength Balance
+                        <h3 className="font-bold text-xs uppercase tracking-[0.15em] text-text-muted flex items-center gap-2 mb-6">
+                            <Radar size={14} className="text-primary" />
+                            Strength Balance
                         </h3>
                         <StrengthRadar data={radarData} />
                     </div>
 
                     {/* Heatmap Card */}
-                    <div className="bg-surface/50 backdrop-blur-xl border border-white/10 rounded-3xl p-6 relative overflow-hidden shadow-2xl">
-                        <div className="absolute top-0 right-0 p-4 opacity-5">
-                            <Search size={120} />
-                        </div>
-                        <h3 className="text-lg font-bold flex items-center gap-2 mb-4 relative z-10">
-                            <TrendingUp className="text-blue-400" size={20} /> Muscle Focus
+                    <div className="card relative overflow-hidden">
+                        <h3 className="font-bold text-xs uppercase tracking-[0.15em] text-text-muted flex items-center gap-2 mb-6">
+                            <Activity size={14} className="text-accent" />
+                            Muscle Focus
                         </h3>
-                        <div className="flex justify-center">
-                            <BodyHeatmap data={heatmapData} />
+                        {/* <div className="absolute top-4 right-4 text-[10px] text-text-muted font-mono bg-white/5 px-2 py-1 rounded">
+                            LAST 30 DAYS
+                        </div> */}
+                        <BodyHeatmap
+                            data={heatmapData}
+                        />
+                        <div className="mt-4 flex justify-center gap-4 text-[10px] text-text-muted font-mono uppercase tracking-widest">
+                            <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-red-500/80" /> High</span>
+                            <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-orange-500/60" /> Med</span>
+                            <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-blue-500/40" /> Low</span>
                         </div>
-                        <p className="text-xs text-text-muted text-center mt-6">
-                            Heatmap based on training volume intensity (last 30d).
-                        </p>
                     </div>
                 </div>
             )}

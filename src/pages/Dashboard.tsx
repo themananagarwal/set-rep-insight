@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useTrainerStore } from "../lib/store";
-import { Play, TrendingUp, Calendar, AlertCircle } from "lucide-react";
+import { Play, TrendingUp, AlertCircle, Calendar, Activity, Zap, Layers } from "lucide-react";
 import { format } from "date-fns";
 
 export default function Dashboard() {
@@ -11,116 +11,149 @@ export default function Dashboard() {
     const lastWorkout = history.length > 0 ? history[history.length - 1] : null;
 
     // Simple "Imbalance" Logic (Placeholder for advanced AI)
-    // Check if Legs are neglected
     const legVolume = history.filter(h => ["sq", "dl"].includes(h.exerciseId)).length;
     const pushVolume = history.filter(h => ["bp", "ohp"].includes(h.exerciseId)).length;
 
-    let insight = "Keep going! Consistency is key.";
+    let insight = "Consistency is key. Keep maintaining your streak.";
     if (history.length > 5) {
         if (legVolume < pushVolume * 0.5) {
-            insight = "Your leg volume is low compared to push. Suggestion: Squats today?";
+            insight = "Leg volume is trailing. Recommendation: Prioritize squats in your next session.";
         }
     }
 
+    // Quick Stats Calculation
+    const totalSets = history.length;
+    const totalVolume = history.reduce((acc, curr) => acc + (curr.weight || 0) * (curr.reps || 0), 0);
+
     return (
-        <div className="space-y-6 pt-6 pb-24">
-            <header className="flex justify-between items-center">
+        <div className="space-y-8 pt-6 pb-32">
+            {/* Header */}
+            <div className="flex justify-between items-end border-b border-white/5 pb-6">
                 <div>
-                    <h1 className="text-2xl font-bold">Hello, {user?.name}</h1>
-                    <p className="text-text-muted text-sm">Ready to crush it?</p>
+                    <h2 className="text-xs font-medium text-text-muted tracking-wide uppercase mb-1">
+                        Overview
+                    </h2>
+                    <h1 className="text-3xl font-semibold tracking-tight text-white">
+                        Welcome, {user?.name}
+                    </h1>
                 </div>
-                <div className="bg-surface p-2 rounded-full border border-secondary">
-                    {/* Avatar Placeholder */}
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-purple-500" />
+                <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-full border border-white/5">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                    <span className="text-xs font-medium text-emerald-500 tracking-wide">
+                        Online
+                    </span>
                 </div>
-            </header>
+            </div>
 
-            {/* Active Plan / Workout Hub */}
+            {/* Active Protocol Card */}
             {routine ? (
-                <div className="bg-gradient-to-br from-primary to-blue-600 rounded-3xl p-6 text-white shadow-lg shadow-primary/25 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10" />
-
-                    <div className="relative z-10 flex flex-col h-full justify-between min-h-[140px]">
-                        <div>
-                            <div className="flex justify-between items-start">
-                                <div>
-                                    <h2 className="text-xl font-bold mb-1">Up Next: {routine.days[routine.currentDayIndex].name}</h2>
-                                    <p className="text-blue-100 text-xs mb-4">
-                                        Day {routine.currentDayIndex + 1} of {routine.days.length} • {routine.name}
-                                    </p>
-                                </div>
-                                <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
-                                    <Calendar size={20} className="text-white" />
-                                </div>
+                <div className="group relative overflow-hidden rounded-2xl bg-surface border border-white/5 p-1 transition-all hover:border-white/10">
+                    <div className="relative z-10 bg-surface-highlight/10 backdrop-blur-sm p-6 rounded-xl space-y-6">
+                        <div className="flex justify-between items-start">
+                            <div className="space-y-1">
+                                <span className="inline-block px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider bg-primary/10 text-primary mb-2">
+                                    Up Next
+                                </span>
+                                <h2 className="text-2xl font-semibold text-white tracking-tight">
+                                    {routine.days[routine.currentDayIndex].name}
+                                </h2>
+                                <p className="text-xs text-text-muted font-medium tracking-wide">
+                                    Phase {routine.currentDayIndex + 1} of {routine.days.length} • {routine.name}
+                                </p>
                             </div>
+                            <Calendar size={24} className="text-white/20" />
+                        </div>
 
-                            {/* Preview Exercises */}
-                            <div className="space-y-1 mb-4">
-                                {routine.days[routine.currentDayIndex].exercises.slice(0, 3).map((ex, i) => {
-                                    if (!ex || !ex.exerciseId) return null;
-                                    return (
-                                        <div key={i} className="text-xs text-blue-50 flex items-center gap-2">
-                                            <div className="w-1 h-1 bg-blue-200 rounded-full" />
-                                            <span className="capitalize">{ex.exerciseId.replace(/_/g, ' ')}</span>
-                                            <span className="opacity-60">({ex.targetSets} x {ex.targetReps})</span>
-                                        </div>
-                                    );
-                                })}
-                                {routine.days[routine.currentDayIndex].exercises.length > 3 && (
-                                    <div className="text-xs text-blue-200 pl-3">+ {routine.days[routine.currentDayIndex].exercises.length - 3} more</div>
-                                )}
-                            </div>
+                        {/* Preview List */}
+                        <div className="space-y-3 border-l-2 border-white/5 pl-4 py-1">
+                            {routine.days[routine.currentDayIndex].exercises.slice(0, 3).map((ex, i) => {
+                                if (!ex || !ex.exerciseId) return null;
+                                return (
+                                    <div key={i} className="flex items-center gap-3 text-sm text-text-muted">
+                                        <div className="w-1 h-1 bg-primary rounded-full" />
+                                        <span className="font-medium text-white/80 flex-1 capitalize">{ex.exerciseId.replace(/_/g, ' ')}</span>
+                                        <span className="text-xs opacity-60">{ex.targetSets} x {ex.targetReps}</span>
+                                    </div>
+                                );
+                            })}
+                            {routine.days[routine.currentDayIndex].exercises.length > 3 && (
+                                <div className="text-xs font-medium text-text-muted pl-4">
+                                    + {routine.days[routine.currentDayIndex].exercises.length - 3} more exercises
+                                </div>
+                            )}
                         </div>
 
                         <button
                             onClick={() => navigate("/workout/active")}
-                            className="bg-white text-primary font-bold py-3 px-6 rounded-xl flex items-center justify-center gap-2 hover:scale-105 transition-transform w-full"
+                            className="w-full py-4 bg-white text-black hover:bg-white/90 font-semibold rounded-xl transition-all shadow-lg shadow-white/5 flex items-center justify-center gap-2"
                         >
-                            <Play fill="currentColor" size={18} /> Start Session
+                            <Play size={16} fill="currentColor" />
+                            <span>Start Workout</span>
                         </button>
                     </div>
                 </div>
             ) : (
-                <div className="bg-secondary p-6 rounded-3xl border border-white/5 text-center space-y-4">
-                    <h2 className="text-xl font-bold text-text-muted">No Active Plan</h2>
-                    <p className="text-xs text-text-muted">Generate a custom plan to get started.</p>
+                <div className="border border-dashed border-white/10 rounded-2xl p-10 text-center space-y-4">
+                    <Layers className="mx-auto text-white/10" size={40} />
+                    <div className="space-y-1">
+                        <h2 className="text-base font-medium text-white">No Active Plan</h2>
+                        <p className="text-xs text-text-muted">Configure your training protocol to begin.</p>
+                    </div>
                     <button
                         onClick={() => navigate("/workout/builder/new")}
-                        className="btn w-full"
+                        className="px-6 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-xs font-medium uppercase tracking-wide transition-colors text-white"
                     >
                         Create Plan
                     </button>
                 </div>
             )}
 
-            {/* AI Insight */}
-            <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-xl flex gap-3 items-start">
-                <AlertCircle className="text-amber-500 shrink-0 mt-0.5" size={20} />
-                <div>
-                    <h4 className="font-semibold text-amber-500 text-sm">Coach Insight</h4>
-                    <p className="text-xs text-text-muted mt-1 leading-relaxed">
-                        {insight}
-                    </p>
+            {/* Performance Metrics */}
+            <div className="space-y-4">
+                <h3 className="text-xs font-medium text-text-muted uppercase tracking-wide px-1">
+                    Performance
+                </h3>
+                <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-surface border border-white/5 p-5 rounded-2xl space-y-2 group hover:border-white/10 transition-colors">
+                        <div className="flex justify-between items-start">
+                            <Activity size={18} className="text-emerald-500" />
+                            <span className="text-[10px] font-medium text-text-muted uppercase tracking-wider">Total Sets</span>
+                        </div>
+                        <div className="text-2xl font-semibold text-white tracking-tight">{totalSets}</div>
+                    </div>
+                    <div className="bg-surface border border-white/5 p-5 rounded-2xl space-y-2 group hover:border-white/10 transition-colors">
+                        <div className="flex justify-between items-start">
+                            <Zap size={18} className="text-amber-500" />
+                            <span className="text-[10px] font-medium text-text-muted uppercase tracking-wider">Last Active</span>
+                        </div>
+                        <div className="text-lg font-semibold text-white tracking-tight truncate">
+                            {lastWorkout ? format(new Date(lastWorkout.completedAt), "MMM d") : "N/A"}
+                        </div>
+                    </div>
+                    <div className="bg-surface border border-white/5 p-5 rounded-2xl space-y-2 col-span-2 group hover:border-white/10 transition-colors">
+                        <div className="flex justify-between items-start">
+                            <TrendingUp size={18} className="text-blue-500" />
+                            <span className="text-[10px] font-medium text-text-muted uppercase tracking-wider">Volume Load</span>
+                        </div>
+                        <div className="flex items-baseline gap-2">
+                            <div className="text-2xl font-semibold text-white tracking-tight">{(totalVolume / 1000).toFixed(1)}k</div>
+                            <span className="text-xs text-text-muted font-medium">kg total</span>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            {/* Stats Grid */}
-            <h3 className="font-semibold text-lg">Quick Stats</h3>
-            <div className="grid grid-cols-2 gap-4">
-                <div className="card flex flex-col gap-2">
-                    <TrendingUp className="text-green-500" size={24} />
-                    <div>
-                        <span className="text-2xl font-bold">{history.length}</span>
-                        <p className="text-xs text-text-muted">Total Sets</p>
+            {/* Insight */}
+            <div className="bg-surface border border-white/5 rounded-2xl p-6 relative overflow-hidden">
+                <div className="flex gap-4 items-start relative z-10">
+                    <div className="p-2 bg-amber-500/10 rounded-lg text-amber-500">
+                        <AlertCircle size={20} />
                     </div>
-                </div>
-                <div className="card flex flex-col gap-2">
-                    <Calendar className="text-blue-500" size={24} />
-                    <div>
-                        <span className="text-2xl font-bold">
-                            {lastWorkout ? format(new Date(lastWorkout.completedAt), "MMM d") : "-"}
-                        </span>
-                        <p className="text-xs text-text-muted">Last Activity</p>
+                    <div className="space-y-1">
+                        <h4 className="text-sm font-medium text-white">Coach Insight</h4>
+                        <p className="text-xs text-text-muted leading-relaxed">
+                            {insight}
+                        </p>
                     </div>
                 </div>
             </div>
