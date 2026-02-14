@@ -123,12 +123,13 @@ function PickerDrawer({ initialValue, onSave, onClose, title, isWork }: {
     };
 
     return createPortal(
-        <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 pointer-events-none">
+    return createPortal(
+        <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
             {/* Backdrop */}
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm pointer-events-auto" onClick={onClose} />
 
             {/* Drawer */}
-            <div className="bg-surface border border-white/10 w-full max-w-[320px] rounded-3xl p-6 pointer-events-auto animate-in zoom-in-95 duration-200 shadow-2xl shadow-black/50">
+            <div className="bg-surface border border-white/10 w-full max-w-[320px] rounded-3xl p-6 pointer-events-auto animate-in zoom-in-95 duration-200 shadow-2xl shadow-black/50 relative z-10">
                 <div className="flex justify-between items-center mb-6">
                     <button onClick={onClose} className="p-2 bg-secondary rounded-full text-text-muted hover:bg-white/10 transition-colors">
                         <X size={20} />
