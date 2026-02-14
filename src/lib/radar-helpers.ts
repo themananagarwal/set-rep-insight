@@ -1,6 +1,8 @@
 import type { WorkoutSet } from "./types";
 
-export type RadarAxis = "chest" | "back" | "shoulders" | "quads" | "glutes_hamstrings" | "arms" | "core";
+import { getExerciseContributions, type RadarAxis, type ExerciseDef } from "./exercises";
+
+export type { RadarAxis };
 
 export interface RadarDataPoint {
     axis: RadarAxis;
@@ -11,61 +13,6 @@ export interface RadarDataPoint {
     e1RM: number;  // Absolute e1RM
 }
 
-// Map exercise IDs to their contribution to each axis (sums don't need to be 1.0, 
-// but usually represent primary/secondary coverage)
-const EXERCISE_CONTRIBUTIONS: Record<string, Partial<Record<RadarAxis, number>>> = {
-    // --- LEGS ---
-    "barbell_back_squat": { "quads": 1.0, "glutes_hamstrings": 0.5, "core": 0.3 },
-    "barbell_front_squat": { "quads": 1.0, "glutes_hamstrings": 0.3, "core": 0.4 },
-    "goblet_squat": { "quads": 0.8, "core": 0.3 },
-    "leg_press": { "quads": 1.0, "glutes_hamstrings": 0.2 },
-    "lunges": { "quads": 0.7, "glutes_hamstrings": 0.7, "core": 0.2 },
-    "romanian_deadlift": { "glutes_hamstrings": 1.0, "back": 0.3, "core": 0.3 },
-    "leg_extension": { "quads": 1.0 },
-    "leg_curl": { "glutes_hamstrings": 1.0 },
-    "standing_calf_raise": { "glutes_hamstrings": 0.2 }, // Minor contribution
-    "glute_bridge": { "glutes_hamstrings": 1.0 },
-    "tibialis_raise": { "quads": 0.1 }, // Minor
-
-    // --- CHEST ---
-    "bench_press": { "chest": 1.0, "shoulders": 0.3, "arms": 0.2 }, // Triceps -> Arms
-    "dumbbell_bench_press": { "chest": 1.0, "shoulders": 0.3, "arms": 0.2 },
-    "incline_bench_press": { "chest": 0.7, "shoulders": 0.5, "arms": 0.2 },
-    "chest_fly": { "chest": 1.0 },
-    "push_up": { "chest": 0.6, "shoulders": 0.2, "core": 0.4 }, // Bodyweight handling needing logic
-    "machine_chest_press": { "chest": 1.0, "shoulders": 0.2, "arms": 0.2 },
-
-    // --- BACK ---
-    "deadlift": { "back": 0.8, "glutes_hamstrings": 0.8, "core": 0.5 },
-    // Note: We don't have "traps" axis, mapping to Back usually covers it, 
-    // but the prompt had "Back" as axis. I'll stick to provided axes.
-    "pull_up": { "back": 1.0, "arms": 0.4, "core": 0.3 },
-    "lat_pulldown": { "back": 1.0, "arms": 0.3 },
-    "dumbbell_row": { "back": 1.0, "arms": 0.3, "core": 0.2 },
-    "barbell_row": { "back": 1.0, "arms": 0.3, "core": 0.4 },
-    "face_pull": { "back": 0.5, "shoulders": 0.5 },
-
-    // --- SHOULDERS ---
-    "overhead_press": { "shoulders": 1.0, "arms": 0.3, "core": 0.3 },
-    "dumbbell_shoulder_press": { "shoulders": 1.0, "arms": 0.3 },
-    "lateral_raise": { "shoulders": 1.0 },
-    "front_raise": { "shoulders": 1.0 },
-    "rear_delt_fly": { "shoulders": 0.8, "back": 0.2 },
-
-    // --- ARMS ---
-    "barbell_curl": { "arms": 1.0 },
-    "dumbbell_curl": { "arms": 1.0 },
-    "hammer_curl": { "arms": 1.0 },
-    "cable_tricep_extension": { "arms": 1.0 },
-    "skull_crusher": { "arms": 1.0 },
-    "tricep_dips": { "arms": 1.0, "chest": 0.3, "shoulders": 0.3 },
-
-    // --- CORE ---
-    "plank": { "core": 1.0 }, // Weighted planks or just duration? Duration conversion is tricky.
-    "crunch": { "core": 1.0 },
-    "hanging_leg_raise": { "core": 1.0 },
-    "cable_crunch": { "core": 1.0 },
-};
 
 // Thresholds for Ratio (e1RM / Bodyweight) to get score 100 (S Tier)
 // These are rough estimates for "Elite" level relative strength
@@ -118,7 +65,7 @@ export const calculateStrengthRadar = (history: WorkoutSet[], userWeight: number
         const e1RM = load * (1 + set.reps / 30);
 
         // Map to axes
-        const contribs = EXERCISE_CONTRIBUTIONS[set.exerciseId];
+        const contribs = getExerciseContributions(set.exerciseId);
         if (contribs) {
             (Object.keys(contribs) as RadarAxis[]).forEach(axis => {
                 const factor = contribs[axis]!;

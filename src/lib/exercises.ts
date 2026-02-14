@@ -1,71 +1,237 @@
-import type { Exercise } from "./types";
+export type RadarAxis = "chest" | "back" | "shoulders" | "quads" | "glutes_hamstrings" | "arms" | "core";
 
-export const EXERCISE_CATEGORIES = [
-    "Legs",
-    "Chest",
-    "Back",
-    "Shoulders",
-    "Arms",
-    "Core",
-    "Cardio",
-    "Other"
-] as const;
+export interface ExerciseDef {
+    id: string;
+    name: string;
+    primaryAxis: RadarAxis;
+    secondaryAxis?: RadarAxis;
+    pattern: "push" | "pull" | "squat" | "hinge" | "lunge" | "carry" | "core" | "isolation";
+    tier: "S" | "A" | "B"; // S=Main Compound, A=Supplemental, B=Isolation/Accessory
+    tags: string[]; // "dumbbell", "barbell", "machine", "bodyweight", "unilateral"
+}
 
-export const ALL_EXERCISES: Exercise[] = [
-    // --- LEGS ---
-    { id: "barbell_back_squat", name: "Barbell Back Squat", muscle: "Legs", type: "compound" },
-    { id: "barbell_front_squat", name: "Barbell Front Squat", muscle: "Legs", type: "compound" },
-    { id: "goblet_squat", name: "Goblet Squat", muscle: "Legs", type: "compound" },
-    { id: "leg_press", name: "Leg Press", muscle: "Legs", type: "compound" },
-    { id: "lunges", name: "Walking Lunges", muscle: "Legs", type: "compound" },
-    { id: "r Romanian_deadlift", name: "Romanian Deadlift", muscle: "Legs", type: "compound" },
-    { id: "leg_extension", name: "Leg Extension", muscle: "Legs", type: "isolation" },
-    { id: "leg_curl", name: "Leg Curl", muscle: "Legs", type: "isolation" },
-    { id: "calf_raise", name: "Standing Calf Raise", muscle: "Legs", type: "isolation" },
+export const EXERCISE_LIBRARY: Record<string, ExerciseDef> = {
+    // --- LEGS (QUADS) ---
+    "barbell_back_squat": {
+        id: "barbell_back_squat", name: "Barbell Back Squat",
+        primaryAxis: "quads", secondaryAxis: "glutes_hamstrings",
+        pattern: "squat", tier: "S",
+        tags: ["barbell", "compound", "main"]
+    },
+    "barbell_front_squat": {
+        id: "barbell_front_squat", name: "Front Squat",
+        primaryAxis: "quads", secondaryAxis: "core",
+        pattern: "squat", tier: "S",
+        tags: ["barbell", "compound"]
+    },
+    "goblet_squat": {
+        id: "goblet_squat", name: "Goblet Squat",
+        primaryAxis: "quads",
+        pattern: "squat", tier: "A",
+        tags: ["dumbbell", "kettlebell", "beginner_friendly"]
+    },
+    "leg_press": {
+        id: "leg_press", name: "Leg Press",
+        primaryAxis: "quads",
+        pattern: "squat", tier: "A",
+        tags: ["machine", "hypertrophy"]
+    },
+    "walking_lunge": {
+        id: "walking_lunge", name: "Walking Lunge",
+        primaryAxis: "quads", secondaryAxis: "glutes_hamstrings",
+        pattern: "lunge", tier: "A",
+        tags: ["dumbbell", "bodyweight", "unilateral"]
+    },
+    "leg_extension": {
+        id: "leg_extension", name: "Leg Extension",
+        primaryAxis: "quads",
+        pattern: "isolation", tier: "B",
+        tags: ["machine", "isolation"]
+    },
+
+    // --- LEGS (GLUTES/HAMS) ---
+    "deadlift": {
+        id: "deadlift", name: "Conventional Deadlift",
+        primaryAxis: "glutes_hamstrings", secondaryAxis: "back",
+        pattern: "hinge", tier: "S",
+        tags: ["barbell", "compound", "main"]
+    },
+    "romanian_deadlift": {
+        id: "romanian_deadlift", name: "Romanian Deadlift",
+        primaryAxis: "glutes_hamstrings", secondaryAxis: "back",
+        pattern: "hinge", tier: "A",
+        tags: ["barbell", "dumbbell", "hypetrophy"]
+    },
+    "leg_curl": {
+        id: "leg_curl", name: "Leg Curl",
+        primaryAxis: "glutes_hamstrings",
+        pattern: "isolation", tier: "B",
+        tags: ["machine", "isolation"]
+    },
+    "glute_bridge": {
+        id: "glute_bridge", name: "Glute Bridge",
+        primaryAxis: "glutes_hamstrings",
+        pattern: "hinge", tier: "B",
+        tags: ["bodyweight", "dumbbell"]
+    },
 
     // --- CHEST ---
-    { id: "bench_press", name: "Barbell Bench Press", muscle: "Chest", type: "compound" },
-    { id: "db_bench_press", name: "Dumbbell Bench Press", muscle: "Chest", type: "compound" },
-    { id: "incline_bench_press", name: "Incline Bench Press", muscle: "Chest", type: "compound" },
-    { id: "chest_fly", name: "Cable Chest Fly", muscle: "Chest", type: "isolation" },
-    { id: "push_up", name: "Push Up", muscle: "Chest", type: "compound" },
+    "bench_press": {
+        id: "bench_press", name: "Barbell Bench Press",
+        primaryAxis: "chest", secondaryAxis: "shoulders",
+        pattern: "push", tier: "S",
+        tags: ["barbell", "compound", "main"]
+    },
+    "dumbbell_bench_press": {
+        id: "dumbbell_bench_press", name: "Dumbbell Press",
+        primaryAxis: "chest", secondaryAxis: "arms",
+        pattern: "push", tier: "A",
+        tags: ["dumbbell", "hypertrophy"]
+    },
+    "incline_bench_press": {
+        id: "incline_bench_press", name: "Incline Bench Press",
+        primaryAxis: "chest", secondaryAxis: "shoulders",
+        pattern: "push", tier: "A",
+        tags: ["barbell", "dumbbell"]
+    },
+    "push_up": {
+        id: "push_up", name: "Push Up",
+        primaryAxis: "chest", secondaryAxis: "core",
+        pattern: "push", tier: "B",
+        tags: ["bodyweight", "compound"]
+    },
+    "chest_fly": {
+        id: "chest_fly", name: "Chest Fly",
+        primaryAxis: "chest",
+        pattern: "isolation", tier: "B",
+        tags: ["dumbbell", "cable", "machine", "isolation"]
+    },
 
     // --- BACK ---
-    { id: "deadlift", name: "Deadlift", muscle: "Back", type: "compound" },
-    { id: "pull_up", name: "Pull Up", muscle: "Back", type: "compound" },
-    { id: "lat_pulldown", name: "Lat Pulldown", muscle: "Back", type: "compound" },
-    { id: "db_row", name: "Dumbbell Row", muscle: "Back", type: "compound" },
-    { id: "barbell_row", name: "Barbell Row", muscle: "Back", type: "compound" },
-    { id: "face_pull", name: "Face Pull", muscle: "Back", type: "isolation" },
+    "pull_up": {
+        id: "pull_up", name: "Pull Up",
+        primaryAxis: "back", secondaryAxis: "arms",
+        pattern: "pull", tier: "S",
+        tags: ["bodyweight", "compound", "vertical"]
+    },
+    "barbell_row": {
+        id: "barbell_row", name: "Barbell Row",
+        primaryAxis: "back", secondaryAxis: "arms",
+        pattern: "pull", tier: "S",
+        tags: ["barbell", "compound", "horizontal"]
+    },
+    "dumbbell_row": {
+        id: "dumbbell_row", name: "Dumbbell Row",
+        primaryAxis: "back", secondaryAxis: "arms",
+        pattern: "pull", tier: "A",
+        tags: ["dumbbell", "unilateral", "horizontal"]
+    },
+    "lat_pulldown": {
+        id: "lat_pulldown", name: "Lat Pulldown",
+        primaryAxis: "back", secondaryAxis: "arms",
+        pattern: "pull", tier: "A",
+        tags: ["cable", "machine", "vertical"]
+    },
+    "face_pull": {
+        id: "face_pull", name: "Face Pull",
+        primaryAxis: "shoulders", secondaryAxis: "back", // Rear delts often grouped with back or shoulders
+        pattern: "pull", tier: "B",
+        tags: ["cable", "prehab"]
+    },
 
     // --- SHOULDERS ---
-    { id: "ohp", name: "Overhead Press", muscle: "Shoulders", type: "compound" },
-    { id: "db_shoulder_press", name: "Dumbbell Shoulder Press", muscle: "Shoulders", type: "compound" },
-    { id: "lateral_raise", name: "Lateral Raise", muscle: "Shoulders", type: "isolation" },
-    { id: "front_raise", name: "Front Raise", muscle: "Shoulders", type: "isolation" },
-    { id: "rear_delt_fly", name: "Rear Delt Fly", muscle: "Shoulders", type: "isolation" },
+    "overhead_press": {
+        id: "overhead_press", name: "Overhead Press",
+        primaryAxis: "shoulders", secondaryAxis: "arms",
+        pattern: "push", tier: "S",
+        tags: ["barbell", "compound", "vertical"]
+    },
+    "dumbbell_shoulder_press": {
+        id: "dumbbell_shoulder_press", name: "DB Shoulder Press",
+        primaryAxis: "shoulders", secondaryAxis: "arms",
+        pattern: "push", tier: "A",
+        tags: ["dumbbell", "hypertrophy"]
+    },
+    "lateral_raise": {
+        id: "lateral_raise", name: "Lateral Raise",
+        primaryAxis: "shoulders",
+        pattern: "isolation", tier: "B",
+        tags: ["dumbbell", "cable", "isolation"]
+    },
+    "rear_delt_fly": {
+        id: "rear_delt_fly", name: "Rear Delt Fly",
+        primaryAxis: "shoulders", secondaryAxis: "back",
+        pattern: "isolation", tier: "B",
+        tags: ["dumbbell", "machine"]
+    },
 
     // --- ARMS ---
-    { id: "barbell_curl", name: "Barbell Curl", muscle: "Arms", type: "isolation" },
-    { id: "db_curl", name: "Dumbbell Curl", muscle: "Arms", type: "isolation" },
-    { id: "hammer_curl", name: "Hammer Curl", muscle: "Arms", type: "isolation" },
-    { id: "tricep_extension", name: "Cable Tricep Extension", muscle: "Arms", type: "isolation" },
-    { id: "skull_crusher", name: "Skull Crusher", muscle: "Arms", type: "isolation" },
-    { id: "dips", name: "Tricep Dips", muscle: "Arms", type: "compound" },
+    "barbell_curl": {
+        id: "barbell_curl", name: "Barbell Curl",
+        primaryAxis: "arms",
+        pattern: "isolation", tier: "B",
+        tags: ["barbell", "biceps"]
+    },
+    "dumbbell_curl": {
+        id: "dumbbell_curl", name: "Dumbbell Curl",
+        primaryAxis: "arms",
+        pattern: "isolation", tier: "B",
+        tags: ["dumbbell", "biceps"]
+    },
+    "tricep_dips": {
+        id: "tricep_dips", name: "Tricep Dips",
+        primaryAxis: "arms", secondaryAxis: "chest",
+        pattern: "push", tier: "A",
+        tags: ["bodyweight", "compound", "triceps"]
+    },
+    "cable_tricep_extension": {
+        id: "cable_tricep_extension", name: "Tricep Extension",
+        primaryAxis: "arms",
+        pattern: "isolation", tier: "B",
+        tags: ["cable", "triceps"]
+    },
 
     // --- CORE ---
-    { id: "plank", name: "Plank", muscle: "Core", type: "isolation" },
-    { id: "crunch", name: "Crunch", muscle: "Core", type: "isolation" },
-    { id: "leg_raise", name: "Hanging Leg Raise", muscle: "Core", type: "isolation" },
-    { id: "lying_leg_raise", name: "Lying Leg Raise", muscle: "Legs", type: "isolation" }, // User asked for Lying Leg Raise under Legs
-    { id: "cable_crunch", name: "Cable Crunch", muscle: "Core", type: "isolation" },
+    "plank": {
+        id: "plank", name: "Plank",
+        primaryAxis: "core",
+        pattern: "core", tier: "B",
+        tags: ["bodyweight", "static"]
+    },
+    "hanging_leg_raise": {
+        id: "hanging_leg_raise", name: "Hanging Leg Raise",
+        primaryAxis: "core",
+        pattern: "core", tier: "A",
+        tags: ["bodyweight"]
+    },
+    "cable_crunch": {
+        id: "cable_crunch", name: "Cable Crunch",
+        primaryAxis: "core",
+        pattern: "core", tier: "B",
+        tags: ["cable"]
+    }
+};
 
-    // --- CARDIO ---
-    { id: "cycling", name: "Cycling", muscle: "Cardio", type: "compound" },
+// Helper: Get contributions for radar analysis
+export const getExerciseContributions = (exerciseId: string) => {
+    const def = EXERCISE_LIBRARY[exerciseId];
+    if (!def) return {};
 
-    // --- NEW ADDITIONS ---
-    { id: "glute_bridge", name: "Glute Bridge", muscle: "Legs", type: "isolation" },
-    { id: "tibialis_raise", name: "Tibialis Raise", muscle: "Legs", type: "isolation" },
-    { id: "knee_press", name: "Knee Press", muscle: "Legs", type: "isolation" }, // Assuming this is a leg exercise as requested
-    { id: "machine_chest_press", name: "Machine Chest Press", muscle: "Chest", type: "compound" }
-];
+    const contribs: Partial<Record<RadarAxis, number>> = {};
+
+    // Primary Axis -> 1.0
+    contribs[def.primaryAxis] = 1.0;
+
+    // Secondary Axis -> 0.5 (or specific logic)
+    if (def.secondaryAxis) {
+        contribs[def.secondaryAxis] = 0.5;
+
+        // Special case overrides mimicking original logic
+        if (def.id === "deadlift" && def.secondaryAxis === "back") contribs["back"] = 0.8;
+    }
+
+    // Hardcoded overrides for complex compounds if needed
+    if (def.id === "barbell_back_squat") contribs["core"] = 0.3;
+
+    return contribs;
+};
