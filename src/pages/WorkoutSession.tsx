@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTrainerStore } from "../lib/store";
 import { predictNextSet } from "../lib/ai";
+import { getLoadCoaching, CoachingResult } from "../lib/coaching"; // Import Coaching
 import type { WorkoutSet } from "../lib/types";
 import { RestTimer } from "../components/RestTimer";
 import { TimePicker } from "../components/TimePicker";
