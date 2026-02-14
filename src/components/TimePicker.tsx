@@ -134,15 +134,10 @@ function PickerDrawer({ initialValue, onSave, onClose, title, isWork }: {
                         <X size={20} />
                     </button>
                     <h3 className="font-bold text-lg">{title}</h3>
-                    <button
-                        onClick={() => onSave((mins * 60) + secs)}
-                        className={clsx("p-2 rounded-full text-white shadow-lg", isWork ? "bg-primary shadow-primary/20" : "bg-orange-500 shadow-orange-500/20")}
-                    >
-                        <Check size={20} />
-                    </button>
+                    <div className="w-9" /> {/* Spacer to balance title */}
                 </div>
 
-                <div className="flex justify-center gap-8 relative">
+                <div className="flex justify-center gap-8 relative mb-8">
                     {/* Selection Indicator */}
                     <div className="absolute top-1/2 -translate-y-1/2 left-4 right-4 h-[40px] bg-white/5 rounded-lg pointer-events-none" />
 
@@ -169,6 +164,17 @@ function PickerDrawer({ initialValue, onSave, onClose, title, isWork }: {
                         />
                     </div>
                 </div>
+
+                {/* Confirm Button */}
+                <button
+                    onClick={() => onSave((mins * 60) + secs)}
+                    className={clsx(
+                        "w-full py-4 rounded-xl font-bold text-lg text-white shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2",
+                        isWork ? "bg-primary shadow-primary/20" : "bg-orange-500 shadow-orange-500/20"
+                    )}
+                >
+                    <Check size={24} /> Done
+                </button>
             </div>
         </div>,
         document.body
