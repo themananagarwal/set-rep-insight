@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTrainerStore } from "../lib/store";
 import type { Routine, WorkoutExercisePattern, TargetSet } from "../lib/types";
-import { Save, Plus, Trash2, ChevronDown, Copy, Dumbbell } from "lucide-react";
+import { Save, Plus, Trash2, ChevronDown, Copy, Dumbbell, Clock } from "lucide-react";
 import { generateID } from "../lib/utils";
 import clsx from "clsx";
 
@@ -283,7 +283,7 @@ export default function WorkoutBuilder() {
                     <div className="space-y-4">
                         {currentDay.exercises.map((exPattern, exIndex) => {
                             const exerciseData = exercises.find(e => e.id === exPattern.exerciseId);
-                            const isCardio = exerciseData?.muscle === "Cardio";
+                            const isCardio = exerciseData?.muscle === "Cardio" || exPattern.exerciseId === "plank";
 
                             return (
                                 <div key={exIndex} className="bg-surface border border-secondary p-4 rounded-xl relative group">
@@ -320,8 +320,8 @@ export default function WorkoutBuilder() {
                                     {isCardio ? (
                                         <div className="bg-secondary/30 rounded-lg p-4 text-center border border-white/5">
                                             <div className="flex items-center justify-center gap-2 text-primary font-bold text-sm mb-1">
-                                                <Dumbbell size={16} />
-                                                <span>Cardio Mode</span>
+                                                <Clock size={16} />
+                                                <span>Timed Mode</span>
                                             </div>
                                             <p className="text-xs text-text-muted">
                                                 Duration and intervals will be configured during the workout.

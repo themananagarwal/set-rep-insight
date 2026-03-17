@@ -23,7 +23,8 @@ const S_TIER_RATIOS: Record<RadarAxis, number> = {
     "quads": 2.0,           // 2.0x BW Squat
     "glutes_hamstrings": 2.5, // 2.5x BW Deadlift
     "arms": 0.7,            // 0.7x BW Curl/Extension total (a bit high, but "S" is elite)
-    "core": 1.5             // Weighted core strength often > 1.5x BW effectively
+    "core": 1.5,            // Weighted core strength often > 1.5x BW effectively
+    "Cardio": 2.0           // Cardio threshold
 };
 
 const getTier = (score: number): string => {
@@ -47,7 +48,7 @@ export const calculateStrengthRadar = (history: WorkoutSet[], userWeight: number
     // 2. Group & Calculate e1RM
     const axisValues: Record<RadarAxis, number[]> = {
         chest: [], back: [], shoulders: [], quads: [],
-        glutes_hamstrings: [], arms: [], core: []
+        glutes_hamstrings: [], arms: [], core: [], Cardio: []
     };
 
     recentSets.forEach(set => {
@@ -111,7 +112,7 @@ export const calculateStrengthRadar = (history: WorkoutSet[], userWeight: number
         const labels: Record<RadarAxis, string> = {
             chest: "Chest", back: "Back", shoulders: "Shldr",
             quads: "Quads", glutes_hamstrings: "Glutes",
-            arms: "Arms", core: "Core"
+            arms: "Arms", core: "Core", Cardio: "Cardio"
         };
 
         return {

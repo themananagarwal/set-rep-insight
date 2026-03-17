@@ -8,7 +8,7 @@ import clsx from "clsx";
 export default function WorkoutPreview() {
     const { id } = useParams();
     const navigate = useNavigate();
-    const { routines, setActiveRoutine } = useTrainerStore();
+    const { routines, setActiveRoutine, exercises } = useTrainerStore();
 
     const routine = routines.find(r => r.id === id);
 
@@ -141,19 +141,24 @@ export default function WorkoutPreview() {
                     </div>
 
                     <div className="space-y-3 pb-24">
-                        {currentDay?.exercises.map((ex, i) => (
-                            <div key={i} className="flex items-center gap-4 p-4 bg-secondary/30 rounded-xl border border-white/5">
-                                <div className="w-10 h-10 rounded-full bg-surface flex items-center justify-center text-text-muted">
-                                    <Dumbbell size={18} />
+                        {currentDay?.exercises.map((ex, i) => {
+                            const exerciseDef = exercises.find(e => e.id === ex.exerciseId);
+                            const isTimed = exerciseDef?.muscle === "Cardio" || ex.exerciseId === "plank";
+
+                            return (
+                                <div key={i} className="flex items-center gap-4 p-4 bg-secondary/30 rounded-xl border border-white/5">
+                                    <div className="w-10 h-10 rounded-full bg-surface flex items-center justify-center text-text-muted">
+                                        {isTimed ? <Clock size={18} /> : <Dumbbell size={18} />}
+                                    </div>
+                                    <div className="flex-1">
+                                        <h3 className="font-bold capitalize">{ex.exerciseId.replace(/_/g, " ")}</h3>
+                                        <p className="text-xs text-text-muted">
+                                            {isTimed ? `${ex.sets.length} Intervals` : `${ex.sets.length} Sets • ${ex.targetReps || "8-12"} Reps`}
+                                        </p>
+                                    </div>
                                 </div>
-                                <div className="flex-1">
-                                    <h3 className="font-bold capitalize">{ex.exerciseId.replace(/_/g, " ")}</h3>
-                                    <p className="text-xs text-text-muted">
-                                        {ex.sets.length} Sets • {ex.targetReps || "8-12"} Reps
-                                    </p>
-                                </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                         {(!currentDay || currentDay.exercises.length === 0) && (
                             <p className="text-text-muted text-center py-4">Rest Day or No Exercises Scheduled</p>
                         )}

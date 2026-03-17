@@ -1,316 +1,202 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import type { UserProfile } from "../lib/types";
-import { useTrainerStore } from "../lib/store";
-import { calculateBMI, estimateBodyFat, getIdealWeight } from "../lib/generator";
-import { ChevronRight, Activity, Ruler, Weight, User as UserIcon, Calculator, Target } from "lucide-react";
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
+import { motion } from 'framer-motion';
+import { User, MapPin, Phone, Mail, ArrowRight, Loader } from 'lucide-react';
+
+const ADMIN_EMAIL = 'manan.agarwal1901@gmail.com';
 
 export default function Onboarding() {
+    const { user, loading } = useAuth();
     const navigate = useNavigate();
-    const { setUser } = useTrainerStore();
+    const [searchParams] = useSearchParams();
 
-    const [step, setStep] = useState(1);
-    const [formData, setFormData] = useState<Partial<UserProfile>>({
-        name: "",
-        gender: "male",
-        weight: 0,
-        height: 0,
-        goal: "strength",
-        activityLevel: "active",
-        bloodwork: { lastUpdated: Date.now() },
-        goalWeight: 0, // Will default to 0
-        bodyFat: 0
+    const [formData, setFormData] = useState({
+        full_name: '',
+        phone: '',
+        location: '',
+        referred_by: '',
     });
 
-    const [showEstimates, setShowEstimates] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-    // Auto-calculate estimates when height/weight/gender changes
     useEffect(() => {
-        if (formData.weight && formData.height && formData.gender && showEstimates) {
-            const bmi = calculateBMI(formData.weight, formData.height);
-            const bf = estimateBodyFat(bmi, formData.gender);
-            const idealW = getIdealWeight(formData.height);
-
-            setFormData(prev => ({
-                ...prev,
-                bodyFat: Number(bf.toFixed(1)),
-                goalWeight: Number(idealW.toFixed(1))
-            }));
+        // Auto-fill referral from URL
+        const ref = searchParams.get('ref');
+        if (ref) {
+            setFormData(prev => ({ ...prev, referred_by: ref }));
         }
-    }, [formData.weight, formData.height, formData.gender, showEstimates]);
 
-    const handleSubmit = (e: React.FormEvent) => {
+        // Redirect to login if not authenticated
+        // Wait for auth loading to finish
+        if (!loading && !user) {
+            const loginUrl = ref ? `/login?ref=${ref}` : '/login';
+            navigate(loginUrl);
+        }
+    }, [searchParams, user, loading, navigate]);
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        // Validate
-        if (!formData.name || !formData.weight || !formData.height) return;
 
-        setUser(formData as UserProfile);
-        navigate("/");
+        if (!user) return; // Should be handled by useEffect redirect, but safe guard
+
+        setSubmitting(true);
+        setError(null);
+
+        try {
+            // Determine initial status
+            // If referred by the Admin, auto-approve!
+            const initialStatus = formData.referred_by?.trim().toLowerCase() === ADMIN_EMAIL.toLowerCase()
+                ? 'approved'
+                : 'pending';
+
+            const role = user.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase() ? 'admin' : 'user';
+
+            const { error: insertError } = await supabase
+                .from('profiles')
+                .insert({
+                    id: user.id,
+                    email: user.email!,
+                    full_name: formData.full_name,
+                    phone: formData.phone,
+                    location: formData.location,
+                    referred_by: formData.referred_by,
+                    status: role === 'admin' ? 'approved' : initialStatus, // Admins auto-approve themselves too
+                    role: role
+                });
+
+            if (insertError) throw insertError;
+
+            // Force reload or re-fetch profile to update context
+            window.location.href = '/';
+
+        } catch (err: any) {
+            console.error('Onboarding error:', err);
+            setError(err.message || 'Failed to create profile');
+            setSubmitting(false);
+        }
     };
 
-    const nextStep = () => setStep(s => s + 1);
-    const prevStep = () => setStep(s => s - 1);
-
-    const weightDifference = (formData.goalWeight || 0) - (formData.weight || 0);
-
     return (
-        <div className="min-h-screen bg-background text-text flex flex-col justify-center p-6">
-            <div className="max-w-md mx-auto w-full space-y-6">
+        <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-6 relative overflow-hidden">
+            {/* Background Elements */}
+            <div className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-20">
+                <div className="absolute top-[-20%] right-[-20%] w-[500px] h-[500px] bg-red-600 rounded-full blur-[120px]" />
+                <div className="absolute bottom-[-20%] left-[-20%] w-[500px] h-[500px] bg-blue-600 rounded-full blur-[120px]" />
+            </div>
 
-                {/* Header */}
-                <div className="text-center space-y-2">
-                    <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">
-                        Setup Your AI Coach
-                    </h1>
-                    <p className="text-text-muted">
-                        Step {step} of 2
-                    </p>
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="w-full max-w-lg bg-zinc-900/50 backdrop-blur-xl border border-white/5 p-8 rounded-3xl shadow-2xl z-10"
+            >
+                <div className="text-center mb-8">
+                    <h1 className="text-3xl font-bold tracking-tight mb-2">Complete Profile</h1>
+                    <p className="text-zinc-400">Tell us a bit about yourself to get started.</p>
                 </div>
 
+                {error && (
+                    <div className="p-4 rounded-xl bg-red-500/10 text-red-400 border border-red-500/20 mb-6 text-sm">
+                        {error}
+                    </div>
+                )}
+
                 <form onSubmit={handleSubmit} className="space-y-6">
-                    {step === 1 && (
-                        <div className="space-y-5 animate-in fade-in slide-in-from-right-4 duration-300">
-
-                            {/* Name & Gender */}
-                            <div className="flex gap-4">
-                                <div className="space-y-2 flex-1">
-                                    <div className="flex items-center gap-2 ml-1">
-                                        <UserIcon className="text-text-muted" size={16} />
-                                        <label className="text-sm font-medium">Name</label>
-                                    </div>
-                                    <div className="relative">
-                                        <input
-                                            type="text"
-                                            className="input w-full"
-                                            placeholder="Your Name"
-                                            value={formData.name}
-                                            onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                            required
-                                        />
-                                    </div>
-                                </div>
-                                <div className="space-y-2 w-1/3">
-                                    <label className="text-sm font-medium ml-1">Gender</label>
-                                    <select
-                                        className="input w-full appearance-none text-center"
-                                        value={formData.gender}
-                                        onChange={e => setFormData({ ...formData, gender: e.target.value as "male" | "female" })}
-                                    >
-                                        <option value="male">Male</option>
-                                        <option value="female">Female</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            {/* Stats */}
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <div className="flex items-center gap-2 ml-1">
-                                        <Weight className="text-text-muted" size={16} />
-                                        <label className="text-sm font-medium">Weight (kg)</label>
-                                    </div>
-                                    <div className="relative">
-                                        <input
-                                            type="number"
-                                            className="input w-full"
-                                            placeholder="0"
-                                            value={formData.weight || ""}
-                                            onChange={e => setFormData({ ...formData, weight: Number(e.target.value) })}
-                                            required
-                                        />
-                                    </div>
-                                </div>
-                                <div className="space-y-2">
-                                    <div className="flex items-center gap-2 ml-1">
-                                        <Ruler className="text-text-muted" size={16} />
-                                        <label className="text-sm font-medium">Height (cm)</label>
-                                    </div>
-                                    <div className="relative">
-                                        <input
-                                            type="number"
-                                            className="input w-full"
-                                            placeholder="0"
-                                            value={formData.height || ""}
-                                            onChange={e => setFormData({ ...formData, height: Number(e.target.value) })}
-                                            required
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Analysis / Estimates */}
-                            <div className="bg-secondary/30 p-4 rounded-xl space-y-4 border border-white/5">
-                                <div className="flex justify-between items-center">
-                                    <h3 className="font-semibold text-sm">Targets & Composition</h3>
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowEstimates(!showEstimates)}
-                                        className="text-primary text-xs font-bold flex items-center gap-1 hover:underline"
-                                    >
-                                        <Calculator size={12} /> {showEstimates ? "Enter Manually" : "Estimate for me"}
-                                    </button>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <div className="flex items-center gap-2 ml-1">
-                                            <Target className="text-text-muted" size={14} />
-                                            <label className="text-xs font-medium text-text-muted">Goal Weight (kg)</label>
-                                        </div>
-                                        <div className="relative">
-                                            <input
-                                                type="number"
-                                                className="input w-full py-2 text-sm"
-                                                placeholder={showEstimates ? "Calculating..." : "0"}
-                                                value={formData.goalWeight || ""}
-                                                onChange={e => setFormData({ ...formData, goalWeight: Number(e.target.value) })}
-                                                disabled={showEstimates}
-                                            />
-                                        </div>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <div className="flex items-center gap-2 ml-1">
-                                            <Activity className="text-text-muted" size={14} />
-                                            <label className="text-xs font-medium text-text-muted">Body Fat %</label>
-                                        </div>
-                                        <div className="relative">
-                                            <input
-                                                type="number"
-                                                className="input w-full py-2 text-sm"
-                                                placeholder={showEstimates ? "Calculating..." : "0"}
-                                                value={formData.bodyFat || ""}
-                                                onChange={e => setFormData({ ...formData, bodyFat: Number(e.target.value) })}
-                                                disabled={showEstimates}
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {(formData.goalWeight || 0) > 0 && (formData.weight || 0) > 0 && (
-                                    <div className="text-center text-xs font-medium py-1">
-                                        To reach your goal, you need to
-                                        <span className={weightDifference > 0 ? "text-green-400" : "text-amber-400"}>
-                                            {weightDifference > 0 ? " GAIN " : " LOSE "}
-                                            {Math.abs(weightDifference).toFixed(1)}kg
-                                        </span>
-                                    </div>
-                                )}
-                            </div>
-
-
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium ml-1">Primary Goal</label>
-                                <div className="grid grid-cols-2 gap-2">
-                                    {(["strength", "hypertrophy", "endurance", "weight_loss"] as const).map(goal => (
-                                        <button
-                                            key={goal}
-                                            type="button"
-                                            onClick={() => setFormData({ ...formData, goal })}
-                                            className={`py-3 rounded-xl border transition-all capitalized text-xs font-medium px-1
-                                        ${formData.goal === goal
-                                                    ? "bg-primary/20 border-primary text-primary"
-                                                    : "bg-secondary border-transparent text-text-muted hover:bg-secondary/80"
-                                                }`}
-                                        >
-                                            {goal.replace('_', ' ').charAt(0).toUpperCase() + goal.replace('_', ' ').slice(1)}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <button type="button" onClick={nextStep} className="btn w-full mt-2">
-                                Next Step <ChevronRight size={18} />
-                            </button>
+                    {/* Email (Read Only) */}
+                    <div className="space-y-2">
+                        <label className="text-xs font-bold uppercase tracking-wider text-zinc-500 ml-1">Email</label>
+                        <div className="relative">
+                            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
+                            <input
+                                type="email"
+                                value={user?.email || ''}
+                                disabled
+                                className="w-full bg-zinc-900 border border-white/5 rounded-xl py-4 pl-12 pr-4 text-zinc-400 cursor-not-allowed"
+                            />
                         </div>
-                    )}
+                    </div>
 
-                    {step === 2 && (
-                        <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium ml-1">Activity Level</label>
-                                <select
-                                    className="input appearance-none w-full"
-                                    value={formData.activityLevel}
-                                    onChange={e => setFormData({ ...formData, activityLevel: e.target.value as any })}
-                                >
-                                    <option value="sedentary">Sedentary (Office Job)</option>
-                                    <option value="active">Active (1-3 workouts/week)</option>
-                                    <option value="athlete">Athlete (4+ workouts/week)</option>
-                                </select>
-                            </div>
-
-                            <div className="bg-secondary/50 p-4 rounded-xl border border-primary/20">
-                                <div className="flex items-start gap-3">
-                                    <Activity className="text-primary mt-1" size={24} />
-                                    <div>
-                                        <h3 className="font-semibold text-primary">Biological Context (Optional)</h3>
-                                        <p className="text-xs text-text-muted mt-1">
-                                            Our AI adjusts intensity based on your biomarkers.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="space-y-4">
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium ml-1">Testosterone Levels</label>
-                                    <div className="grid grid-cols-3 gap-2">
-                                        {(['Low', 'Normal', 'High'] as const).map(level => (
-                                            <button
-                                                key={level}
-                                                type="button"
-                                                onClick={() => setFormData({
-                                                    ...formData,
-                                                    bloodwork: { ...formData.bloodwork!, testosterone: level }
-                                                })}
-                                                className={`py-2 px-1 rounded-xl border transition-all text-xs font-medium
-                                            ${formData.bloodwork?.testosterone === level
-                                                        ? "bg-blue-500/20 border-blue-500 text-blue-400"
-                                                        : "bg-secondary border-transparent text-text-muted"
-                                                    }`}
-                                            >
-                                                {level}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium ml-1">Iron / Ferritin</label>
-                                    <div className="grid grid-cols-3 gap-2">
-                                        {(['Low', 'Normal', 'High'] as const).map(level => (
-                                            <button
-                                                key={level}
-                                                type="button"
-                                                onClick={() => setFormData({
-                                                    ...formData,
-                                                    bloodwork: { ...formData.bloodwork!, iron: level }
-                                                })}
-                                                className={`py-2 px-1 rounded-xl border transition-all text-xs font-medium
-                                            ${formData.bloodwork?.iron === level
-                                                        ? "bg-amber-500/20 border-amber-500 text-amber-400"
-                                                        : "bg-secondary border-transparent text-text-muted"
-                                                    }`}
-                                            >
-                                                {level}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="flex gap-3 pt-4">
-                                <button type="button" onClick={prevStep} className="btn btn-secondary flex-1">
-                                    Back
-                                </button>
-                                <button type="submit" className="btn flex-1">
-                                    Complete Setup
-                                </button>
-                            </div>
+                    {/* Full Name */}
+                    <div className="space-y-2">
+                        <label className="text-xs font-bold uppercase tracking-wider text-zinc-500 ml-1">Full Name</label>
+                        <div className="relative">
+                            <User className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
+                            <input
+                                type="text"
+                                required
+                                value={formData.full_name}
+                                onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                                placeholder="John Doe"
+                                className="w-full bg-black/50 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-white placeholder:text-zinc-600 focus:outline-none focus:border-red-500/50 focus:ring-1 focus:ring-red-500/50 transition-all"
+                            />
                         </div>
-                    )}
+                    </div>
+
+                    {/* Phone */}
+                    <div className="space-y-2">
+                        <label className="text-xs font-bold uppercase tracking-wider text-zinc-500 ml-1">Phone Number</label>
+                        <div className="relative">
+                            <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
+                            <input
+                                type="tel"
+                                required
+                                value={formData.phone}
+                                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                placeholder="+1 (555) 000-0000"
+                                className="w-full bg-black/50 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-white placeholder:text-zinc-600 focus:outline-none focus:border-red-500/50 focus:ring-1 focus:ring-red-500/50 transition-all"
+                            />
+                        </div>
+                    </div>
+
+                    {/* Location */}
+                    <div className="space-y-2">
+                        <label className="text-xs font-bold uppercase tracking-wider text-zinc-500 ml-1">Location</label>
+                        <div className="relative">
+                            <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
+                            <input
+                                type="text"
+                                required
+                                value={formData.location}
+                                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                                placeholder="New York, NY"
+                                className="w-full bg-black/50 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-white placeholder:text-zinc-600 focus:outline-none focus:border-red-500/50 focus:ring-1 focus:ring-red-500/50 transition-all"
+                            />
+                        </div>
+                    </div>
+
+                    {/* Referred By */}
+                    <div className="space-y-2">
+                        <label className="text-xs font-bold uppercase tracking-wider text-zinc-500 ml-1">Referred By (Optional)</label>
+                        <div className="relative">
+                            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
+                            <input
+                                type="email"
+                                value={formData.referred_by}
+                                onChange={(e) => setFormData({ ...formData, referred_by: e.target.value })}
+                                placeholder="friend@example.com"
+                                className="w-full bg-black/50 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-white placeholder:text-zinc-600 focus:outline-none focus:border-red-500/50 focus:ring-1 focus:ring-red-500/50 transition-all"
+                            />
+                        </div>
+                    </div>
+
+                    <button
+                        type="submit"
+                        disabled={submitting}
+                        className="w-full py-4 bg-white text-black font-bold rounded-xl hover:bg-zinc-200 transition-colors flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed mt-8"
+                    >
+                        {submitting ? (
+                            <Loader className="animate-spin" size={20} />
+                        ) : (
+                            <>
+                                <span>Create Profile</span>
+                                <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                            </>
+                        )}
+                    </button>
                 </form>
-            </div>
+            </motion.div>
         </div>
     );
 }

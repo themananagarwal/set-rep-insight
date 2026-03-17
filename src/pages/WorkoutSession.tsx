@@ -55,7 +55,7 @@ export default function WorkoutSession() {
     const plannedExercise = activeDay?.exercises[exerciseIndex];
     const activeExerciseId = plannedExercise?.exerciseId || (exercises[0] ? exercises[0].id : "unknown");
     const activeExerciseData = exercises.find(e => e.id === activeExerciseId);
-    const isCardio = activeExerciseData?.muscle === "Cardio";
+    const isCardio = activeExerciseData?.muscle === "Cardio" || activeExerciseData?.id === "plank";
 
     const activeHistory = [...history, ...sessionSets];
 

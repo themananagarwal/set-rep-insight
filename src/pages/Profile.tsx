@@ -1,14 +1,21 @@
 import { useTrainerStore } from "../lib/store";
+import { useAuth } from "../contexts/AuthContext";
 import { analyzeWeaknesses, generateRoutine } from "../lib/generator";
-import { Activity, Trophy, Zap, Map } from "lucide-react";
+import { Activity, Trophy, Zap, Map, LogOut } from "lucide-react";
 
 export default function Profile() {
+    const { user: authUser, signOut } = useAuth();
     const { user, history, exercises } = useTrainerStore();
+    
 
-    if (!user) return <div className="p-6">No user found.</div>;
+    if (!user || !authUser) return <div className="p-6">Loading profile...</div>;
 
     const weaknesses = analyzeWeaknesses(history, exercises);
     const routine = generateRoutine(user, weaknesses);
+
+    
+
+    
 
     return (
         <div className="pt-6 pb-24 space-y-8">
@@ -21,6 +28,19 @@ export default function Profile() {
                     <p className="text-text-muted capitalize">{user.goal} • {user.weight}kg</p>
                 </div>
             </div>
+
+                        {/* Account Actions */}
+            <div className="space-y-4">
+                <h2 className="text-xl font-bold text-white mb-2">Account Actions</h2>
+                <button
+                    onClick={signOut}
+                    className="w-full py-4 bg-zinc-900 text-white font-bold rounded-xl hover:bg-zinc-800 transition-colors flex items-center justify-center gap-2"
+                >
+                    <LogOut size={18} />
+                    <span>Sign Out</span>
+                </button>
+            </div>
+
 
             {/* Stats Overview */}
             <div className="grid grid-cols-2 gap-4">

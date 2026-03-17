@@ -1,4 +1,4 @@
-export type RadarAxis = "chest" | "back" | "shoulders" | "quads" | "glutes_hamstrings" | "arms" | "core";
+export type RadarAxis = "chest" | "back" | "shoulders" | "quads" | "glutes_hamstrings" | "arms" | "core" | "Cardio";
 
 export interface ExerciseDef {
     id: string;
@@ -209,6 +209,18 @@ export const EXERCISE_LIBRARY: Record<string, ExerciseDef> = {
         primaryAxis: "core",
         pattern: "core", tier: "B",
         tags: ["cable"]
+    },
+    "cycling": {
+        id: "cycling", name: "Cycling",
+        primaryAxis: "Cardio",
+        pattern: "isolation", tier: "B",
+        tags: ["stationary", "outdoor", "intervals"]
+    },
+    "treadmill": {
+        id: "treadmill", name: "Treadmill",
+        primaryAxis: "Cardio",
+        pattern: "isolation", tier: "B",
+        tags: ["indoor", "intervals"]
     }
 };
 
