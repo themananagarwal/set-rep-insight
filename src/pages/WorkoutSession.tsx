@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTrainerStore } from "../lib/store";
-import { predictNextSet } from "../lib/ai";
-import { getLoadCoaching, type CoachingResult } from "../lib/coaching"; // Import Coaching
+import { getProgression, createFatigueTracker, type FullProgressionResult, type FatigueTracker } from "../lib/progression";
 import type { WorkoutSet } from "../lib/types";
 import { RestTimer } from "../components/RestTimer";
 import { TimePicker } from "../components/TimePicker";
@@ -15,7 +14,7 @@ export default function WorkoutSession() {
     const searchParams = new URLSearchParams(window.location.search);
     const exerciseIdParam = searchParams.get("exerciseId");
 
-    const { user, history, exercises, routines, activeRoutineId, addSet } = useTrainerStore();
+    const { history, exercises, routines, activeRoutineId, addSet } = useTrainerStore();
     const routine = routines.find(r => r.id === activeRoutineId);
     const activeDay = routine?.days[routine?.currentDayIndex || 0];
 
@@ -57,20 +56,21 @@ export default function WorkoutSession() {
     const activeExerciseData = exercises.find(e => e.id === activeExerciseId);
     const isCardio = activeExerciseData?.muscle === "Cardio" || activeExerciseData?.id === "plank";
 
-    const activeHistory = [...history, ...sessionSets];
-
-    // -- AI PREDICTION --
-    const prediction = predictNextSet(activeExerciseId, activeHistory, user);
-
+    // -- INITIALISE INPUTS & CARDIO PLAN ON EXERCISE CHANGE --
     useEffect(() => {
+        // Seed weight from last logged set for this exercise (or 0 for cold start)
+        const lastSet = [...history]
+            .filter(s => s.exerciseId === activeExerciseId)
+            .sort((a, b) => b.completedAt - a.completedAt)[0];
+
         setInputs({
-            weight: prediction.suggestedWeight,
-            reps: prediction.suggestedReps,
+            weight: lastSet?.weight ?? 0,
+            reps: lastSet?.reps ?? 0,
             rpe: 8,
-            duration: 60 // Default duration for now
+            duration: 60
         });
 
-        // Initialize Plan based on target sets
+        // Initialize cardio interval plan
         const targetSets = plannedExercise?.targetSets || 3;
         const newPlan = Array.from({ length: targetSets }).map((_, i) => ({
             id: `set-${i}`,
@@ -78,7 +78,7 @@ export default function WorkoutSession() {
             rest: 0
         }));
         setCardioPlan(newPlan);
-    }, [activeExerciseId]); // Removed sessionSets.length dependency to prevent reset during workout
+    }, [activeExerciseId]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // -- AUDIO HELPERS --
     // -- AUDIO HELPERS --
@@ -229,7 +229,10 @@ export default function WorkoutSession() {
     };
 
     // -- COACHING STATE --
-    const [coachingRec, setCoachingRec] = useState<CoachingResult | null>(null);
+    const [coachingRec, setCoachingRec] = useState<FullProgressionResult | null>(null);
+    const [fatigueTracker] = useState<FatigueTracker>(() => createFatigueTracker());
+    // Track per-exercise set count for this session
+    const [exerciseSetCounts, setExerciseSetCounts] = useState<Record<string, number>>({});
 
     const handleLogSet = (silent = false, specificDuration?: number) => {
         const newSet: WorkoutSet = {
@@ -246,15 +249,46 @@ export default function WorkoutSession() {
         setSessionSets(prev => [...prev, newSet]);
 
         if (!isCardio && !silent) {
-            // Trigger Coaching
-            const result = getLoadCoaching(newSet, {
-                target: {
-                    rpeRange: [7, 9],
-                    repsRange: [8, 12]
-                },
-                config: { increment: 2.5 },
-                // Mock user state for now
-                userState: { pain: 0, soreness: 0, sleep: 7 }
+            // Track set count per exercise
+            const setNum = (exerciseSetCounts[activeExerciseId] ?? 0) + 1;
+            setExerciseSetCounts(prev => ({ ...prev, [activeExerciseId]: setNum }));
+
+            // Update fatigue tracker
+            fatigueTracker.addSetToFatigue(activeExerciseId, Number(inputs.rpe) || 8, setNum);
+
+            // Get planned rep range from routine if available
+            const plannedExercise = activeDay?.exercises.find(e => e.exerciseId === activeExerciseId);
+            let planRepRange: [number, number] | undefined;
+            if (plannedExercise?.sets?.[0]?.reps) {
+                const repStr = plannedExercise.sets[0].reps;
+                const parts = repStr.split('-').map(Number);
+                if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+                    planRepRange = [parts[0], parts[1]];
+                } else if (parts.length === 1 && !isNaN(parts[0])) {
+                    planRepRange = [parts[0], parts[0]];
+                }
+            }
+
+            // Get history for this exercise from local store
+            const exerciseHistory = history.filter(s => s.exerciseId === activeExerciseId);
+
+            // Get exercise name
+            const exerciseData = exercises.find(e => e.id === activeExerciseId);
+            const exerciseName = exerciseData?.name ?? activeExerciseId;
+
+            // Primary muscle fatigue
+            const primaryMuscleFatigue = fatigueTracker.getPrimaryMuscleFatigue(activeExerciseId);
+
+            // Run new progression engine
+            const result = getProgression({
+                completedSet: newSet,
+                exerciseId: activeExerciseId,
+                exerciseName,
+                setNumber: setNum,
+                totalExercisesCompletedBefore: exerciseIndex,
+                primaryMuscleFatigue,
+                exerciseHistory,
+                planRepRange,
             });
             setCoachingRec(result);
 
@@ -266,7 +300,7 @@ export default function WorkoutSession() {
         if (!coachingRec) return;
         setInputs(prev => ({
             ...prev,
-            weight: coachingRec.nextWeight
+            weight: coachingRec.result.recommended_weight
         }));
         setCoachingRec(null);
     };
@@ -326,36 +360,47 @@ export default function WorkoutSession() {
                 </button>
             </div>
 
-            {/* --- COACHING BANNER --- */}
-            {coachingRec && (
-                <div className="animate-in slide-in-from-top-4 fade-in duration-300">
-                    <div className={clsx(
-                        "rounded-lg p-5 border border-l-4 shadow-2xl backdrop-blur-md",
-                        coachingRec.recommendation === "increase" ? "bg-emerald-900/10 border-emerald-500 border-l-emerald-500" :
-                            coachingRec.recommendation === "decrease" ? "bg-amber-900/10 border-amber-500 border-l-amber-500" :
-                                "bg-primary/5 border-primary border-l-primary"
-                    )}>
-                        <div className="flex justify-between items-center mb-3">
-                            <h3 className="font-bold text-xs uppercase tracking-widest flex items-center gap-2 text-white">
-                                {coachingRec.recommendation === "increase" ? "Recommendation: Increase Load" :
-                                    coachingRec.recommendation === "decrease" ? "Recommendation: Deload" :
-                                        "Recommendation: Maintain"}
-                            </h3>
-                            <div className="text-2xl font-black text-white">
-                                {coachingRec.nextWeight}<span className="text-xs text-text-muted ml-0.5 font-sans">kg</span>
-                            </div>
-                        </div>
-                        <p className="text-xs text-text-muted font-medium mb-4 leading-relaxed opacity-80">{coachingRec.reasoning}</p>
+            {/* --- COACHING BANNER (new progression engine) --- */}
+            {coachingRec && (() => {
+                const { userMessage, result } = coachingRec;
+                const badge = userMessage.badge;
+                const borderColor =
+                    badge === "up"   ? "border-emerald-500 border-l-emerald-500" :
+                    badge === "down" ? "border-amber-500 border-l-amber-500" :
+                    badge === "reps" ? "border-blue-400 border-l-blue-400" :
+                                       "border-primary border-l-primary";
+                const bgColor =
+                    badge === "up"   ? "bg-emerald-900/10" :
+                    badge === "down" ? "bg-amber-900/10" :
+                    badge === "reps" ? "bg-blue-900/10" :
+                                       "bg-primary/5";
+                const badgeEmoji = badge === "up" ? "↑" : badge === "down" ? "↓" : badge === "reps" ? "⟳" : "—";
+                const badgeColor =
+                    badge === "up" ? "text-emerald-400" : badge === "down" ? "text-amber-400" : badge === "reps" ? "text-blue-400" : "text-primary";
 
-                        <button
-                            onClick={applyCoaching}
-                            className="w-full py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-sm text-xs font-bold uppercase tracking-widest transition-colors"
-                        >
-                            Apply
-                        </button>
+                return (
+                    <div className="animate-in slide-in-from-top-4 fade-in duration-300">
+                        <div className={clsx("rounded-lg p-5 border border-l-4 shadow-2xl backdrop-blur-md", bgColor, borderColor)}>
+                            <div className="flex justify-between items-start mb-2">
+                                <span className={clsx("text-xl font-black mr-2 leading-none", badgeColor)}>{badgeEmoji}</span>
+                                <p className="font-bold text-sm text-white flex-1 leading-snug">{userMessage.headline}</p>
+                                {result.recommended_weight > 0 && (
+                                    <div className="text-2xl font-black text-white ml-3 whitespace-nowrap">
+                                        {result.recommended_weight}<span className="text-xs text-text-muted ml-0.5 font-sans">kg</span>
+                                    </div>
+                                )}
+                            </div>
+                            <p className="text-xs text-text-muted font-medium mb-4 leading-relaxed opacity-80 ml-7">{userMessage.detail}</p>
+                            <button
+                                onClick={applyCoaching}
+                                className="w-full py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-sm text-xs font-bold uppercase tracking-widest transition-colors"
+                            >
+                                Apply {result.recommended_weight > 0 ? `${result.recommended_weight} kg` : "Suggestion"}
+                            </button>
+                        </div>
                     </div>
-                </div>
-            )}
+                );
+            })()}
 
             {/* Input Form */}
             <div className="space-y-8">
