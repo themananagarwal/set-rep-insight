@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { X, Check } from "lucide-react";
 import clsx from "clsx";
 import { createPortal } from "react-dom";
@@ -69,49 +69,66 @@ function PickerDrawer({ initialValue, onSave, onClose, title, isWork }: {
     const [mins, setMins] = useState(Math.floor(initialValue / 60));
     const [secs, setSecs] = useState(initialValue % 60);
 
+    const ITEM_HEIGHT = 40;
+
     // Scroll Wheel Component
     const Wheel = ({ range, value, onChange }: { range: number[], value: number, onChange: (v: number) => void }) => {
         const scrollerRef = useRef<HTMLDivElement>(null);
+        const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-        // Scroll to initial position
+        // Scroll to initial position on mount
         useEffect(() => {
             if (scrollerRef.current) {
-                const itemHeight = 40; // Approx height
-                scrollerRef.current.scrollTop = value * itemHeight;
+                scrollerRef.current.scrollTop = value * ITEM_HEIGHT;
             }
+        }, []);
+
+        const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+            const target = e.target as HTMLDivElement;
+
+            // Clear any pending debounce
+            if (debounceRef.current) clearTimeout(debounceRef.current);
+
+            // Debounce: wait for scroll to settle (150ms), then snap & select
+            debounceRef.current = setTimeout(() => {
+                const rawIndex = target.scrollTop / ITEM_HEIGHT;
+                const index = Math.round(rawIndex);
+                const clampedIndex = Math.max(0, Math.min(index, range.length - 1));
+
+                // Snap scroll to exact position
+                target.scrollTo({ top: clampedIndex * ITEM_HEIGHT, behavior: 'smooth' });
+
+                // Auto-select the centered value
+                if (range[clampedIndex] !== undefined) {
+                    onChange(range[clampedIndex]);
+                }
+            }, 150);
+        }, [range, onChange]);
+
+        // Cleanup on unmount
+        useEffect(() => {
+            return () => {
+                if (debounceRef.current) clearTimeout(debounceRef.current);
+            };
         }, []);
 
         return (
             <div
                 className="h-[200px] overflow-y-auto snap-y snap-mandatory scrollbar-hide relative py-[80px]"
                 ref={scrollerRef}
-                onScroll={(e) => {
-                    // Simple snap detection could go here, but CSS snap handles the UI feel.
-                    // We need to detect which item is centered to update state.
-                    const target = e.target as HTMLDivElement;
-                    const itemHeight = 40;
-                    const index = Math.round(target.scrollTop / itemHeight);
-                    if (range[index] !== undefined && range[index] !== value) {
-                        // Debouncing this in a real app would be good, 
-                        // but for local state it's fine.
-                        // Actually, onScroll is too frequent. Let's start with click selection 
-                        // or just let the user scroll and we read the value on confirm?
-                        // Better: Click to select or IntersectionObserver.
-                        // For MVP: Click preferred, but let's try to make it feel like key entry
-                    }
-                }}
+                onScroll={handleScroll}
             >
                 {range.map(num => (
                     <div
                         key={num}
                         className={clsx(
-                            "h-[40px] flex items-center justify-center snap-center transition-all cursor-pointer",
+                            "h-[40px] flex items-center justify-center snap-center transition-all cursor-pointer select-none",
                             value === num ? (isWork ? "text-primary font-bold text-2xl" : "text-orange-500 font-bold text-2xl") : "text-text-muted/50 text-lg"
                         )}
                         onClick={() => {
                             onChange(num);
                             if (scrollerRef.current) {
-                                scrollerRef.current.scrollTo({ top: num * 40, behavior: 'smooth' });
+                                scrollerRef.current.scrollTo({ top: num * ITEM_HEIGHT, behavior: 'smooth' });
                             }
                         }}
                     >
