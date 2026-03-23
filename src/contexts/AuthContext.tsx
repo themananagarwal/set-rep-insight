@@ -1,177 +1,126 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import type { User, Session } from '@supabase/supabase-js';
-import { supabase } from '../lib/supabase';
-
-export interface Profile {
-    id: string;
-    email: string;
-    full_name: string;
-    phone: string;
-    location: string;
-    role: 'user' | 'admin';
-    status: 'pending' | 'approved' | 'rejected';
-    referred_by?: string;
-    height?: number; // cm
-    weight?: number; // kg
-}
+import type { UserProfile } from '../lib/types';
+import { useMockBackendStore } from '../lib/mockBackend';
+import { useTrainerStore } from '../lib/store';
 
 interface AuthContextType {
-    user: User | null;
-    session: Session | null;
-    profile: Profile | null;
+    user: UserProfile | null;
     loading: boolean;
-    signIn: (email: string, password: string) => Promise<{ error: any }>;
-    signUp: (email: string, password: string) => Promise<{ data: { user: User | null; session: Session | null }; error: any }>;
-    signOut: () => Promise<void>;
-    refreshProfile: (userId?: string) => Promise<void>;
-    updateProfile: (updates: Partial<Profile>) => Promise<void>;
+    login: (email: string, password?: string) => Promise<{ error?: string }>;
+    logout: () => Promise<void>;
+    viewMode: "admin" | "client";
+    switchViewMode: (mode: "admin" | "client") => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-    const [user, setUser] = useState<User | null>(null);
-    const [session, setSession] = useState<Session | null>(null);
-    const [profile, setProfile] = useState<Profile | null>(null);
+    const [user, setUser] = useState<UserProfile | null>(null);
     const [loading, setLoading] = useState(true);
+    const [viewMode, setViewMode] = useState<"admin" | "client">("client");
 
-    const BYPASS_AUTH = true; // Set to true to disable login gate
+    const backendUsers = useMockBackendStore(state => state.users);
+    const routinesByUserId = useMockBackendStore(state => state.routinesByUserId);
+    const historyByUserId = useMockBackendStore(state => state.historyByUserId);
 
-    // Helper to fetch profile
-    const fetchProfile = async (userId: string) => {
-        if (BYPASS_AUTH) {
-            // Check local store for stats
-            const ptStorage = localStorage.getItem('pt_storage');
-            let weight: number | undefined;
-            let height: number | undefined;
-            if (ptStorage) {
-                try {
-                    const parsed = JSON.parse(ptStorage);
-                    weight = parsed.state?.user?.weight;
-                    height = parsed.state?.user?.height;
-                } catch (e) { }
-            }
+    const trainerStore = useTrainerStore();
 
-            setProfile({
-                id: userId,
-                email: 'offline@user.local',
-                full_name: 'Offline User',
-                phone: '',
-                location: '',
-                role: 'admin',
-                status: 'approved',
-                height: height,
-                weight: weight
-            });
-            return;
-        }
-
-        try {
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', userId)
-                .maybeSingle();
-
-            if (error) {
-                console.error("[Auth] Profile Fetch Error:", error);
-            }
-
-            if (data) {
-                setProfile(data as Profile);
-            } else {
-                setProfile(null);
-            }
-        } catch (err) {
-            console.error("[Auth] Unexpected Profile Error:", err);
-            setProfile(null);
-        }
-    };
-
+    // Auto-login from memory (mock session persistence)
     useEffect(() => {
-        if (BYPASS_AUTH) {
-            const mockUser = { id: 'offline-user', email: 'offline@user.local' } as User;
-            setUser(mockUser);
-            setSession({ user: mockUser } as Session);
-            fetchProfile('offline-user');
-            setLoading(false);
-            return;
-        }
-
-        // Check active sessions and sets the user
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            setSession(session);
-            setUser(session?.user ?? null);
-            if (session?.user) {
-                fetchProfile(session.user.id);
+        const savedSession = localStorage.getItem('pt_mock_session');
+        if (savedSession) {
+            try {
+                const parsed = JSON.parse(savedSession);
+                if (parsed.userId) {
+                    const foundUser = backendUsers.find(u => u.id === parsed.userId);
+                    if (foundUser) {
+                        setUser(foundUser);
+                        trainerStore.setUser(foundUser);
+                        
+                        // Hydrate view mode
+                        const savedMode = localStorage.getItem('pt_view_mode');
+                        if (savedMode === 'admin' && foundUser.role === 'admin') {
+                            setViewMode('admin');
+                        } else {
+                            setViewMode('client');
+                            // If they are a client (or an admin impersonating a client), hydrate their workouts
+                            useTrainerStore.setState({
+                               routines: routinesByUserId[foundUser.id] || [],
+                               history: historyByUserId[foundUser.id] || []
+                           });
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error("Session parse error", e);
             }
-            setLoading(false);
-        });
-
-        // Listen for changes
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-            setSession(session);
-            setUser(session?.user ?? null);
-
-            if (session?.user) {
-                fetchProfile(session.user.id);
-            } else {
-                setProfile(null);
-            }
-
-            setLoading(false);
-        });
-
-        return () => subscription.unsubscribe();
-    }, []);
-
-    const signUp = async (email: string, password: string) => {
-        return await supabase.auth.signUp({
-            email,
-            password,
-        });
-    };
-
-    const signIn = async (email: string, password: string) => {
-        return await supabase.auth.signInWithPassword({
-            email,
-            password,
-        });
-    };
-
-    const signOut = async () => {
-        await supabase.auth.signOut();
-        setProfile(null);
-    };
-
-    const refreshProfile = async (userId?: string) => {
-        const idToFetch = userId || user?.id;
-        if (idToFetch) {
-            await fetchProfile(idToFetch);
         }
-    };
+        setLoading(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // Only run once on mount
 
-    const updateProfile = async (updates: Partial<Profile>) => {
-        if (BYPASS_AUTH) {
-            setProfile(prev => prev ? { ...prev, ...updates } : null);
-            return;
+    const login = async (email: string, password?: string) => {
+        setLoading(true);
+        // Simulate network
+        await new Promise(resolve => setTimeout(resolve, 300));
+
+        const foundUser = backendUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
+        
+        if (!foundUser) {
+            setLoading(false);
+            return { error: 'Invalid credentials or user does not exist.' };
         }
 
+        // Mock password check
+        if (password && foundUser.password && foundUser.password !== password) {
+             setLoading(false);
+             return { error: 'Invalid credentials.' };
+        }
+
+        setUser(foundUser);
+        localStorage.setItem('pt_mock_session', JSON.stringify({ userId: foundUser.id }));
+        
+        // Sync to trainer store
+        trainerStore.setUser(foundUser);
+
+        // Determine view mode
+        const initialMode = foundUser.role === "admin" ? "admin" : "client";
+        setViewMode(initialMode);
+        localStorage.setItem('pt_view_mode', initialMode);
+        
+        // Sync history and routines if entering client mode
+        if (initialMode === "client") {
+            const routines = useMockBackendStore.getState().routinesByUserId[foundUser.id] || [];
+            const history = useMockBackendStore.getState().historyByUserId[foundUser.id] || [];
+            useTrainerStore.setState({ routines, history });
+        }
+
+        setLoading(false);
+        return {};
+    };
+
+    const switchViewMode = (mode: "admin" | "client") => {
         if (!user) return;
-        const { error } = await supabase
-            .from('profiles')
-            .update(updates)
-            .eq('id', user.id);
+        setViewMode(mode);
+        localStorage.setItem('pt_view_mode', mode);
 
-        if (!error) {
-            await fetchProfile(user.id);
-        } else {
-            throw error;
+        if (mode === "client") {
+            // Hydrate client data when switching into client mode
+            const routines = useMockBackendStore.getState().routinesByUserId[user.id] || [];
+            const history = useMockBackendStore.getState().historyByUserId[user.id] || [];
+            useTrainerStore.setState({ routines, history });
         }
+    };
+
+    const logout = async () => {
+        setUser(null);
+        localStorage.removeItem('pt_mock_session');
+        localStorage.removeItem('pt_view_mode');
+        trainerStore.setUser(null); // Clear local store user
     };
 
     return (
-        <AuthContext.Provider value={{ user, session, profile, loading, signIn, signUp, signOut, refreshProfile, updateProfile }}>
+        <AuthContext.Provider value={{ user, loading, login, logout, viewMode, switchViewMode }}>
             {children}
         </AuthContext.Provider>
     );

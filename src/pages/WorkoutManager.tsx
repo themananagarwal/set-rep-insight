@@ -5,7 +5,7 @@ import { Plus, Calendar, Dumbbell, Trash2, Edit } from "lucide-react";
 
 export default function WorkoutManager() {
     const navigate = useNavigate();
-    const { routines, deleteRoutine } = useTrainerStore();
+    const { user, routines, deleteRoutine } = useTrainerStore();
     const [deleteCandidateId, setDeleteCandidateId] = useState<string | null>(null);
 
     const handleDeleteClick = (e: React.MouseEvent, id: string) => {
@@ -47,26 +47,36 @@ export default function WorkoutManager() {
                         >
                             <div className="flex justify-between items-start mb-3">
                                 <div>
-                                    <h3 className="font-bold text-lg">{routine.name}</h3>
+                                    <h3 className="font-bold text-lg flex items-center gap-2">
+                                        {routine.name}
+                                        {routine.authorId && routine.authorId !== user?.id && (
+                                            <span className="px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                                                Trainer Assigned
+                                            </span>
+                                        )}
+                                    </h3>
                                     <p className="text-xs text-text-muted line-clamp-1">{routine.description || routine.rationale}</p>
                                 </div>
-                                <div className="flex gap-2">
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            navigate(`/workout/builder/${routine.id}`);
-                                        }}
-                                        className="p-2 bg-secondary hover:bg-white/10 rounded-full text-text-muted hover:text-primary transition-colors"
-                                    >
-                                        <Edit size={16} />
-                                    </button>
-                                    <button
-                                        onClick={(e) => handleDeleteClick(e, routine.id)}
-                                        className="p-2 bg-secondary hover:bg-red-500/20 rounded-full text-text-muted hover:text-red-400 transition-colors"
-                                    >
-                                        <Trash2 size={16} />
-                                    </button>
-                                </div>
+                                
+                                {(!routine.authorId || routine.authorId === user?.id) && (
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                navigate(`/workout/builder/${routine.id}`);
+                                            }}
+                                            className="p-2 bg-secondary hover:bg-white/10 rounded-full text-text-muted hover:text-primary transition-colors"
+                                        >
+                                            <Edit size={16} />
+                                        </button>
+                                        <button
+                                            onClick={(e) => handleDeleteClick(e, routine.id)}
+                                            className="p-2 bg-secondary hover:bg-red-500/20 rounded-full text-text-muted hover:text-red-400 transition-colors"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="flex gap-4 text-xs text-text-muted">

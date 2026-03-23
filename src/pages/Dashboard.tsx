@@ -51,9 +51,15 @@ export default function Dashboard() {
                     <div className="relative z-10 bg-surface-highlight/10 backdrop-blur-sm p-6 rounded-xl space-y-6">
                         <div className="flex justify-between items-start">
                             <div className="space-y-1">
-                                <span className="inline-block px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider bg-primary/10 text-primary mb-2">
-                                    Up Next
-                                </span>
+                                {routine.authorId && routine.authorId !== user?.id ? (
+                                    <span className="inline-block px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/20 mb-2">
+                                        Assigned by Trainer
+                                    </span>
+                                ) : (
+                                    <span className="inline-block px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider bg-primary/10 text-primary mb-2">
+                                        Custom Plan
+                                    </span>
+                                )}
                                 <h2 className="text-2xl font-semibold text-white tracking-tight">
                                     {routine.days[routine.currentDayIndex].name}
                                 </h2>
@@ -103,7 +109,7 @@ export default function Dashboard() {
                         onClick={() => navigate("/workout/builder/new")}
                         className="px-6 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-xs font-medium uppercase tracking-wide transition-colors text-white"
                     >
-                        Create Plan
+                        Create Custom Plan
                     </button>
                 </div>
             )}

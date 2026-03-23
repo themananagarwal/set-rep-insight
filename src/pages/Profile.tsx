@@ -4,7 +4,7 @@ import { analyzeWeaknesses, generateRoutine } from "../lib/generator";
 import { Activity, Trophy, Zap, Map, LogOut } from "lucide-react";
 
 export default function Profile() {
-    const { user: authUser, signOut } = useAuth();
+    const { user: authUser, logout } = useAuth();
     const { user, history, exercises } = useTrainerStore();
     
 
@@ -33,7 +33,7 @@ export default function Profile() {
             <div className="space-y-4">
                 <h2 className="text-xl font-bold text-white mb-2">Account Actions</h2>
                 <button
-                    onClick={signOut}
+                    onClick={logout}
                     className="w-full py-4 bg-zinc-900 text-white font-bold rounded-xl hover:bg-zinc-800 transition-colors flex items-center justify-center gap-2"
                 >
                     <LogOut size={18} />

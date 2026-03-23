@@ -6,8 +6,8 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { Loader } from "lucide-react";
 
 // Pages
+import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
-import Onboarding from "./pages/Onboarding"; // Likely deprecated but keeping for now
 import WorkoutManager from "./pages/WorkoutManager";
 import WorkoutBuilder from "./pages/WorkoutBuilder";
 import WorkoutSession from "./pages/WorkoutSession";
@@ -19,8 +19,9 @@ import AdminDashboard from "./pages/AdminDashboard";
 import ProfileSetup from "./pages/ProfileSetup";
 
 // Protected Route Component
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, profile, loading, signOut } = useAuth(); // Ensure signOut is destructured
+function ProtectedRoute({ children, reqRole }: { children: React.ReactNode, reqRole?: "admin" | "client" }) {
+  const { user, loading, viewMode } = useAuth();
+  const isSetupPage = window.location.pathname === '/setup';
 
   if (loading) {
     return (
@@ -30,75 +31,49 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
+  // Not logged in -> go to login
   if (!user) {
     return <Navigate to="/login" replace />;
   }
 
-  // If no profile exists, they should likely be in the signup flow, but if they got here, drag them to signup?
-  // Actually, if they are logged in but have no profile (e.g. old user?), force signup?
-  // Or maybe just show loading until profile is fetched?
-  if (!profile) {
-    // Edge case: User Created but Profile creation failed. 
-    // For now, let's redirect to signup or show error.
-    return <Navigate to="/signup" replace />;
+  // Mode validation
+  if (reqRole && viewMode !== reqRole) {
+    if (viewMode === "admin") return <Navigate to="/admin" replace />;
+    if (viewMode === "client") return <Navigate to="/" replace />;
   }
 
-  // Profile Status Checks
-  if (profile.status === 'pending') {
-    return (
-      <div className="min-h-screen bg-black flex flex-col items-center justify-center text-white p-6 text-center">
-        <div className="w-16 h-16 bg-yellow-500/10 rounded-full flex items-center justify-center mb-4">
-          <Loader className="text-yellow-500" size={32} />
-        </div>
-        <h1 className="text-2xl font-bold mb-2">You're on the Waitlist</h1>
-        <p className="text-zinc-400 max-w-sm mb-6">
-          Your profile has been created and is waiting for administrator approval. You'll be able to access the dashboard soon.
-        </p>
-        <button
-          onClick={() => window.location.reload()}
-          className="px-6 py-2 bg-white text-black font-bold rounded-full hover:bg-zinc-200 transition-colors mb-4"
-        >
-          Refresh Status
-        </button>
-        <button onClick={signOut} className="text-sm text-zinc-500 hover:text-white underline">
-          Sign Out
-        </button>
-      </div>
-    );
-  }
-
-  if (profile.status === 'rejected') {
-    return (
-      <div className="min-h-screen bg-black flex flex-col items-center justify-center text-white p-6 text-center">
-        <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mb-4">
-          <Loader className="text-red-500" size={32} />
-        </div>
-        <h1 className="text-2xl font-bold mb-2">Access Denied</h1>
-        <p className="text-zinc-400 max-w-sm mb-6">
-          Unfortunately, your request for access has been denied at this time.
-        </p>
-        <button onClick={signOut} className="px-6 py-2 bg-zinc-800 text-white font-bold rounded-full hover:bg-zinc-700 transition-colors">
-          Sign Out
-        </button>
-      </div>
-    );
-  }
-
-  // If Approved, check if they have Height/Weight (Setup Complete)
-  // We can skip this check if we are ALREADY on the setup page to avoid loops
-  const isSetupPage = window.location.pathname === '/setup';
-
-  if (!profile.height || !profile.weight) {
-    // Force Setup
+  // Client Setup check: if actual client has no height/weight, force setup
+  // Admins in client mode shouldn't be forced to do setup.
+  if (viewMode === "client" && user.role === "client" && (!user.height || !user.weight)) {
     if (!isSetupPage) {
       return <Navigate to="/setup" replace />;
     }
     return <>{children}</>;
   }
 
-  // If Setup is done but they verify setup page, redirect to dashboard?
-  if (isSetupPage && profile.height && profile.weight) {
+  // If Setup is done but they visit setup page, redirect to dashboard
+  if (isSetupPage && user.height && user.weight) {
     return <Navigate to="/" replace />;
+  }
+
+  return <>{children}</>;
+}
+
+// Public Route (Login): If already logged in, redirect based on mode
+function PublicRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading, viewMode } = useAuth();
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center text-white">
+        <Loader className="animate-spin text-red-500" size={32} />
+      </div>
+    );
+  }
+
+  if (user) {
+    if (viewMode === "admin") return <Navigate to="/admin" replace />;
+    if (viewMode === "client") return <Navigate to="/" replace />;
   }
 
   return <>{children}</>;
@@ -115,21 +90,35 @@ function App() {
     <BrowserRouter>
       <AuthProvider>
         <Routes>
-          {/* Main Flow: ProtectedRoute handles redirection to /setup or / */}
+          {/* Public Authentication */}
+          <Route path="/login" element={
+            <PublicRoute>
+              <Login />
+            </PublicRoute>
+          } />
+
+          {/* Client Setup Flow */}
           <Route path="/setup" element={
-            <ProtectedRoute>
+            <ProtectedRoute reqRole="client">
               <ProfileSetup />
             </ProtectedRoute>
           } />
 
+          {/* Admin Flow */}
+          <Route path="/admin/*" element={
+            <ProtectedRoute reqRole="admin">
+              <AdminDashboard />
+            </ProtectedRoute>
+          } />
+
+          {/* Client Flow */}
           <Route element={
-            <ProtectedRoute>
+            <ProtectedRoute reqRole="client">
               <Layout />
             </ProtectedRoute>
           }>
             <Route path="/" element={<Dashboard />} />
-            <Route path="/onboarding" element={<Onboarding />} />
-
+            
             {/* Workout Section */}
             <Route path="/workout" element={<WorkoutManager />} />
             <Route path="/workout/preview/:id" element={<WorkoutPreview />} />
@@ -139,7 +128,6 @@ function App() {
 
             <Route path="/history" element={<HistoryPage />} />
             <Route path="/profile" element={<Profile />} />
-            <Route path="/admin" element={<AdminDashboard />} />
           </Route>
 
           {/* Catch-all/Fallback */}
@@ -150,4 +138,4 @@ function App() {
   );
 }
 
-export default App; // Final export
+export default App;

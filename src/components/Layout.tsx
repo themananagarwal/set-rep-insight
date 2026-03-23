@@ -2,9 +2,11 @@ import { Outlet, Link, useLocation } from "react-router-dom";
 import { Dumbbell, LayoutDashboard, History, User } from "lucide-react";
 import clsx from "clsx";
 import { ReloadPrompt } from "./ReloadPrompt";
+import { useAuth } from "../contexts/AuthContext";
 
 export function Layout() {
     const location = useLocation();
+    const { user, viewMode, switchViewMode } = useAuth();
 
     const navItems = [
         { icon: LayoutDashboard, label: "Home", path: "/" },
@@ -21,7 +23,18 @@ export function Layout() {
 
             <ReloadPrompt />
             {/* Main Content Area */}
-            <main className="flex-1 overflow-y-auto pb-24 safe-area-inset-top">
+            <main className="flex-1 overflow-y-auto pb-24 safe-area-inset-top relative">
+                {user?.role === "admin" && viewMode === "client" && (
+                    <div className="bg-red-600/90 backdrop-blur-md text-white text-xs font-bold py-2.5 px-4 shadow-[0_4px_20px_rgba(220,38,38,0.4)] sticky top-0 z-50 flex items-center justify-between border-b border-red-500">
+                        <span>🏋️‍♂️ Client Training Mode</span>
+                        <button 
+                            onClick={() => switchViewMode("admin")} 
+                            className="bg-white text-red-600 px-3 py-1 rounded-full whitespace-nowrap hover:bg-zinc-200 transition-colors shadow-sm"
+                        >
+                            Return to Portal
+                        </button>
+                    </div>
+                )}
                 <div className="max-w-md mx-auto p-4 h-full">
                     <Outlet />
                 </div>

@@ -12,7 +12,7 @@ interface TrainerState {
     activeRoutineId: string | null;
 
     // Actions
-    setUser: (user: UserProfile) => void;
+    setUser: (user: UserProfile | null) => void;
 
     // Routine Management
     addRoutine: (routine: Routine) => void;

@@ -1,14 +1,22 @@
 export type UserProfile = {
+    id: string;
+    email: string;
+    phone?: string;
+    password?: string; // Mock password for POC
+    role: "admin" | "client";
+    trainerId?: string; // If role is client, who manages them
     name: string;
-    gender: "male" | "female"; // Needed for BF% estimation
-    weight: number;
-    height: number; // cm
-    goalWeight?: number; // Optional, user might not know
-    bodyFat?: number; // Optional
-    goal: "strength" | "hypertrophy" | "endurance" | "weight_loss"; // Added weight_loss
-    activityLevel: "sedentary" | "active" | "athlete";
+    
+    // Fitness Stats (optional for admins)
+    gender?: "male" | "female";
+    weight?: number;
+    height?: number; // cm
+    goalWeight?: number; 
+    bodyFat?: number; 
+    goal?: "strength" | "hypertrophy" | "endurance" | "weight_loss"; 
+    activityLevel?: "sedentary" | "active" | "athlete";
     bloodwork?: {
-        testosterone?: string; // High/Normal/Low for MVP
+        testosterone?: string; 
         iron?: string;
         vitaminD?: string;
         lastUpdated: number;
@@ -64,6 +72,7 @@ export type Routine = {
     currentDayIndex: number;
     startDate: number;
     lastModified: number;
+    authorId?: string; // Who created it (trainer vs client)
 };
 
 // The "AI" Prediction Result
