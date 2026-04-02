@@ -537,32 +537,36 @@ export default function WorkoutSession() {
                                 <div className="flex items-baseline gap-1">
                                     <span className={clsx(
                                         "text-2xl font-black tabular-nums leading-none",
-                                        sessionSets.filter(h => h.exerciseId === activeExerciseId).length >= (plannedExercise?.targetSets || 3) ? "text-emerald-500" : "text-white"
+                                        !isOnTheGo && sessionSets.filter(h => h.exerciseId === activeExerciseId).length >= (plannedExercise?.targetSets || 3) ? "text-emerald-500" : "text-white"
                                     )}>
                                         {sessionSets.filter(h => h.exerciseId === activeExerciseId).length}
                                     </span>
-                                    <span className="text-sm font-medium text-text-muted">
-                                        / {plannedExercise?.targetSets || 3}
-                                    </span>
+                                    {!isOnTheGo && (
+                                        <span className="text-sm font-medium text-text-muted">
+                                            / {plannedExercise?.targetSets || 3}
+                                        </span>
+                                    )}
                                 </div>
                             </div>
 
-                            {/* Visual Progress Dots */}
-                            <div className="flex gap-1.5">
-                                {Array.from({ length: plannedExercise?.targetSets || 3 }).map((_, i) => {
-                                    const currentCount = sessionSets.filter(h => h.exerciseId === activeExerciseId).length;
-                                    const isDone = i < currentCount;
-                                    return (
-                                        <div
-                                            key={i}
-                                            className={clsx(
-                                                "w-3 h-8 rounded-sm transition-all duration-300",
-                                                isDone ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" : "bg-white/10"
-                                            )}
-                                        />
-                                    );
-                                })}
-                            </div>
+                            {/* Visual Progress Dots - Only show if not On The Go */}
+                            {!isOnTheGo && (
+                                <div className="flex gap-1.5">
+                                    {Array.from({ length: plannedExercise?.targetSets || 3 }).map((_, i) => {
+                                        const currentCount = sessionSets.filter(h => h.exerciseId === activeExerciseId).length;
+                                        const isDone = i < currentCount;
+                                        return (
+                                            <div
+                                                key={i}
+                                                className={clsx(
+                                                    "w-3 h-8 rounded-sm transition-all duration-300",
+                                                    isDone ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" : "bg-white/10"
+                                                )}
+                                            />
+                                        );
+                                    })}
+                                </div>
+                            )}
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
