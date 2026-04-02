@@ -31,12 +31,12 @@ export default function WorkoutSession() {
     // sessionStartTime can be used for session-wide filters if needed later
 
     // -- STRUCTURAL STATE --
-    // We must find the correct index in activeDay that matches our exerciseIdParam
-    const initialIndex = exerciseIdParam && activeDay
-        ? activeDay.exercises.findIndex(e => e.exerciseId === exerciseIdParam)
-        : 0;
-
-    const [exerciseIndex] = useState(initialIndex >= 0 ? initialIndex : 0);
+    // Use the exerciseId from URL as primary source of truth
+    const activeExerciseId = exerciseIdParam || (exercises[0] ? exercises[0].id : "unknown");
+    const activeExerciseData = exercises.find(e => e.id === activeExerciseId);
+    const plannedExercise = activeDay?.exercises.find(e => e.exerciseId === activeExerciseId) || onTheGoSession?.exercises.find(e => e.exerciseId === activeExerciseId);
+    
+    // sessionSets should only hold sets from the current live session for this specific exercise
     const [sessionSets, setSessionSets] = useState<WorkoutSet[]>([]);
 
     // -- INPUT STATE --
@@ -64,10 +64,6 @@ export default function WorkoutSession() {
     const [cardioMode, setCardioMode] = useState<'structured' | 'open'>('structured');
     const [openModeDuration, setOpenModeDuration] = useState(0); // Counts UP in open mode
 
-    // Determine active exercise data
-    const plannedExercise = activeDay?.exercises[exerciseIndex];
-    const activeExerciseId = plannedExercise?.exerciseId || exerciseIdParam || (exercises[0] ? exercises[0].id : "unknown");
-    const activeExerciseData = exercises.find(e => e.id === activeExerciseId);
     const isTimed = activeExerciseData?.trackingType === "time";
 
     // -- INITIALISE INPUTS & CARDIO PLAN ON EXERCISE CHANGE --
@@ -321,7 +317,7 @@ export default function WorkoutSession() {
                 exerciseId: activeExerciseId,
                 exerciseName,
                 setNumber: setNum,
-                totalExercisesCompletedBefore: exerciseIndex,
+                totalExercisesCompletedBefore: 0, // Simplified as we don't rely on index anymore
                 primaryMuscleFatigue,
                 exerciseHistory,
                 planRepRange,
