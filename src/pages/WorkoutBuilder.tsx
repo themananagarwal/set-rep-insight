@@ -137,14 +137,18 @@ export default function WorkoutBuilder() {
 
         if (exIndex === undefined) {
             // Adding fresh exercise
+            const exerciseData = exercises.find(e => e.id === exerciseId);
+            const isTimed = exerciseData?.trackingType === "time";
+            const defaultValue = isTimed ? "60" : "10";
+
             const newPattern: WorkoutExercisePattern = {
                 exerciseId: exerciseId,
                 targetSets: 3,
-                targetReps: 10,
+                targetReps: parseInt(defaultValue),
                 sets: [
-                    { ...DEFAULT_SET, id: generateID() },
-                    { ...DEFAULT_SET, id: generateID() },
-                    { ...DEFAULT_SET, id: generateID() }
+                    { ...DEFAULT_SET, id: generateID(), reps: defaultValue },
+                    { ...DEFAULT_SET, id: generateID(), reps: defaultValue },
+                    { ...DEFAULT_SET, id: generateID(), reps: defaultValue }
                 ]
             };
 

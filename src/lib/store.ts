@@ -49,7 +49,7 @@ export const useTrainerStore = create<TrainerState>()(
                 id: def.id,
                 name: def.name,
                 muscle: def.primaryAxis,
-                trackingType: (def.primaryAxis === "Cardio" || def.id === "plank" ? "time" : "reps") as "reps" | "time"
+                trackingType: (def.primaryAxis === "Cardio" || def.id === "plank" || def.name.toLowerCase().includes("plank") ? "time" : "reps") as "reps" | "time"
             })),
             routines: [],
             activeRoutineId: null,
