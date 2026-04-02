@@ -14,9 +14,10 @@ import WorkoutSession from "./pages/WorkoutSession";
 import WorkoutPreview from "./pages/WorkoutPreview";
 import ActiveWorkout from "./pages/ActiveWorkout";
 import HistoryPage from "./pages/History";
+import ProfileSetup from "./pages/ProfileSetup";
+import ExerciseLibrary from "./pages/ExerciseLibrary";
 import Profile from "./pages/Profile";
 import AdminDashboard from "./pages/AdminDashboard";
-import ProfileSetup from "./pages/ProfileSetup";
 
 // Protected Route Component
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -138,6 +139,7 @@ function App() {
             <Route path="/workout/builder/:id" element={<WorkoutBuilder />} />
 
             <Route path="/history" element={<HistoryPage />} />
+            <Route path="/library" element={<ExerciseLibrary />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/admin" element={<AdminDashboard />} />
           </Route>

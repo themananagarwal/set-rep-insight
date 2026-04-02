@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
-import { Dumbbell, LayoutDashboard, History, User } from "lucide-react";
+import { Dumbbell, LayoutDashboard, History, User, Search } from "lucide-react";
 import clsx from "clsx";
 import { ReloadPrompt } from "./ReloadPrompt";
 
@@ -9,6 +9,7 @@ export function Layout() {
     const navItems = [
         { icon: LayoutDashboard, label: "Home", path: "/" },
         { icon: Dumbbell, label: "Workout", path: "/workout" },
+        { icon: Search, label: "Library", path: "/library" },
         { icon: History, label: "History", path: "/history" },
         { icon: User, label: "Profile", path: "/profile" },
     ];
