@@ -48,9 +48,9 @@ export default function WorkoutBuilder() {
                 setActiveDayId(existing.days[0]?.id || null);
             }
         } else if (id === "new") {
-            // Default setup for new plan (Mon-Sun) (Mon-Sun)
-            const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-            const newDays = daysOfWeek.map(dayName => ({
+            // Default setup: Day 1 to Day 3 for a fresh cycle
+            const defaultDays = ["Day 01", "Day 02", "Day 03"];
+            const newDays = defaultDays.map(dayName => ({
                 id: generateID(),
                 name: dayName,
                 exercises: []
@@ -79,27 +79,34 @@ export default function WorkoutBuilder() {
     };
 
     // --- DAY MANAGEMENT ---
-    // const addDay = () => {
-    //     const newDay: WorkoutDay = {
-    //         id: generateID(),
-    //         name: `Day ${draft.days.length + 1}`,
-    //         exercises: []
-    //     };
-    //     setDraft(prev => ({ ...prev, days: [...prev.days, newDay] }));
-    //     setActiveDayId(newDay.id);
-    // };
+    const addDay = () => {
+        const nextNum = draft.days.length + 1;
+        const newDay = {
+            id: generateID(),
+            name: `Day ${nextNum < 10 ? '0' + nextNum : nextNum}`,
+            exercises: []
+        };
+        setDraft(prev => ({ ...prev, days: [...prev.days, newDay] }));
+        setActiveDayId(newDay.id);
+    };
 
-    // const updateDayName = (dayId: string, name: string) => {
-    //     setDraft(prev => ({
-    //         ...prev,
-    //         days: prev.days.map(d => d.id === dayId ? { ...d, name } : d)
-    //     }));
-    // };
+    const updateDayName = (dayId: string, name: string) => {
+        setDraft(prev => ({
+            ...prev,
+            days: prev.days.map(d => d.id === dayId ? { ...d, name } : d)
+        }));
+    };
 
-    // const deleteDay = (dayId: string) => {
-    //     // ... (Logic removed as we fixed days, but keeping function structure if needed or removing it)
-    //     // Since we removed the delete button, this is dead code, but let's effectively disable it or repurpose
-    // };
+    const deleteDay = (dayId: string) => {
+        if (draft.days.length <= 1) return alert("You need at least one day in your routine.");
+        setDraft(prev => {
+            const newDays = prev.days.filter(d => d.id !== dayId);
+            if (activeDayId === dayId) {
+                setActiveDayId(newDays[0]?.id || null);
+            }
+            return { ...prev, days: newDays };
+        });
+    };
 
     const handleCopyDay = (sourceDayId: string) => {
         const sourceDay = draft.days.find(d => d.id === sourceDayId);
@@ -270,7 +277,7 @@ export default function WorkoutBuilder() {
             )}
 
             {/* Day Selector (Horizontal Scroll) */}
-            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide items-center">
                 {draft.days.map(day => (
                     <button
                         key={day.id}
@@ -282,22 +289,44 @@ export default function WorkoutBuilder() {
                                 : "bg-secondary text-text-muted border-transparent hover:bg-white/10"
                         )}
                     >
-                        {day.name.slice(0, 3)}
+                        {day.name}
                     </button>
                 ))}
+                <button
+                    onClick={addDay}
+                    className="p-2 aspect-square bg-primary/10 text-primary border border-primary/20 rounded-full hover:bg-primary/20 transition-colors"
+                    title="Add Day"
+                >
+                    <Plus size={16} />
+                </button>
             </div>
 
             {/* Active Day Editor */}
             {currentDay ? (
                 <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
                     <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                        <h2 className="text-2xl font-bold">{currentDay.name}</h2>
-                        <button
-                            onClick={() => setIsCopyModalOpen(true)}
-                            className="bg-secondary p-2 rounded-lg text-xs font-bold text-primary flex items-center gap-2 hover:bg-white/10 transition-colors"
-                        >
-                            <Copy size={16} /> Copy from...
-                        </button>
+                        <div className="flex items-center gap-3">
+                            <input
+                                value={currentDay.name}
+                                onChange={(e) => updateDayName(currentDay.id, e.target.value)}
+                                className="bg-transparent text-2xl font-bold focus:outline-none placeholder:text-text-muted/50 border-b border-transparent focus:border-primary/50"
+                            />
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setIsCopyModalOpen(true)}
+                                className="bg-secondary p-2 rounded-lg text-xs font-bold text-primary flex items-center gap-2 hover:bg-white/10 transition-colors"
+                            >
+                                <Copy size={16} /> Copy
+                            </button>
+                            <button
+                                onClick={() => deleteDay(currentDay.id)}
+                                className="bg-red-500/10 p-2 rounded-lg text-red-500 hover:bg-red-500/20 transition-colors"
+                                title="Delete Day"
+                            >
+                                <Trash2 size={16} />
+                            </button>
+                        </div>
                     </div>
 
                     {/* Exercises List */}

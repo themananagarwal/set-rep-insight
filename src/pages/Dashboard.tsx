@@ -58,7 +58,7 @@ export default function Dashboard() {
                                     {routine.days[routine.currentDayIndex].name}
                                 </h2>
                                 <p className="text-xs text-text-muted font-medium tracking-wide">
-                                    Phase {routine.currentDayIndex + 1} of {routine.days.length} • {routine.name}
+                                    Next in cycle • {routine.name}
                                 </p>
                             </div>
                             <Calendar size={24} className="text-white/20" />
