@@ -183,46 +183,46 @@ export default function WorkoutBuilder() {
         }));
     };
 
-    // --- SET MANAGEMENT ---
-    const updateSet = (dayId: string, exerciseIndex: number, setIndex: number, field: keyof TargetSet, value: any) => {
+    const updateTargetSets = (dayId: string, exerciseIndex: number, newSets: number) => {
+        if (newSets < 1) return;
         setDraft(prev => ({
             ...prev,
             days: prev.days.map(d => {
                 if (d.id !== dayId) return d;
                 const newExs = [...d.exercises];
-                const newSets = [...newExs[exerciseIndex].sets];
-                newSets[setIndex] = { ...newSets[setIndex], [field]: value };
-                newExs[exerciseIndex] = { ...newExs[exerciseIndex], sets: newSets };
-                return { ...d, exercises: newExs };
-            })
-        }));
-    };
+                const currentPattern = newExs[exerciseIndex];
+                
+                // Regenerate sets to match count
+                const updatedSets = Array.from({ length: newSets }).map((_, i) => {
+                    const existing = currentPattern.sets[i];
+                    return existing ? { ...existing } : { ...DEFAULT_SET, id: generateID() };
+                });
 
-    const addSet = (dayId: string, exerciseIndex: number) => {
-        setDraft(prev => ({
-            ...prev,
-            days: prev.days.map(d => {
-                if (d.id !== dayId) return d;
-                const newExs = [...d.exercises];
-                newExs[exerciseIndex] = {
-                    ...newExs[exerciseIndex],
-                    sets: [...newExs[exerciseIndex].sets, { ...DEFAULT_SET, id: generateID() }]
+                newExs[exerciseIndex] = { 
+                    ...currentPattern, 
+                    targetSets: newSets,
+                    sets: updatedSets
                 };
                 return { ...d, exercises: newExs };
             })
         }));
     };
 
-    const removeSet = (dayId: string, exerciseIndex: number, setIndex: number) => {
+    const updateTargetReps = (dayId: string, exerciseIndex: number, newReps: string) => {
         setDraft(prev => ({
             ...prev,
             days: prev.days.map(d => {
                 if (d.id !== dayId) return d;
                 const newExs = [...d.exercises];
-                newExs[exerciseIndex] = {
-                    ...newExs[exerciseIndex],
-                    // Don't modify targetSets/Reps here as they are deprecated, we rely on sets.length
-                    sets: newExs[exerciseIndex].sets.filter((_, i) => i !== setIndex)
+                const currentPattern = newExs[exerciseIndex];
+                
+                // Update target reps and ALSO update default reps in the 'sets' array
+                const updatedSets = currentPattern.sets.map(s => ({ ...s, reps: newReps }));
+
+                newExs[exerciseIndex] = { 
+                    ...currentPattern, 
+                    targetReps: parseInt(newReps) || 0,
+                    sets: updatedSets
                 };
                 return { ...d, exercises: newExs };
             })
@@ -358,7 +358,7 @@ export default function WorkoutBuilder() {
                                         </button>
                                     </div>
 
-                                    {/* Sets Table or Cardio Message */}
+                                    {/* Simplified UI: Just Sets & Reps */}
                                     {isTimed ? (
                                         <div className="bg-secondary/30 rounded-lg p-4 text-center border border-white/5">
                                             <div className="flex items-center justify-center gap-2 text-primary font-bold text-sm mb-1">
@@ -370,50 +370,33 @@ export default function WorkoutBuilder() {
                                             </p>
                                         </div>
                                     ) : (
-                                        <div className="space-y-2">
-                                            <div className="grid grid-cols-[30px_1fr_1fr_1fr_30px] gap-2 text-xs text-text-muted uppercase font-bold text-center mb-1">
-                                                <span>#</span>
-                                                <span>Reps</span>
-                                                <span>kg</span>
-                                                <span>RPE</span>
-                                                <span></span>
-                                            </div>
-                                            {(exPattern.sets || []).map((set, setIndex) => (
-                                                <div key={set.id || setIndex} className="grid grid-cols-[30px_1fr_1fr_1fr_30px] gap-2 items-center">
-                                                    <span className="text-center text-xs text-text-muted font-mono">{setIndex + 1}</span>
-                                                    <input
-                                                        value={set.reps}
-                                                        onChange={(e) => updateSet(currentDay.id, exIndex, setIndex, 'reps', e.target.value)}
-                                                        className="bg-secondary rounded p-1 text-center text-sm font-bold focus:ring-1 ring-primary outline-none w-full min-w-0"
-                                                        placeholder="10"
-                                                    />
-                                                    <input
-                                                        value={set.weight || ""}
-                                                        onChange={(e) => updateSet(currentDay.id, exIndex, setIndex, 'weight', e.target.value)}
-                                                        className="bg-secondary rounded p-1 text-center text-sm focus:ring-1 ring-primary outline-none w-full min-w-0"
-                                                        placeholder="-"
-                                                    />
-                                                    <input
-                                                        value={set.rpe || ""}
-                                                        onChange={(e) => updateSet(currentDay.id, exIndex, setIndex, 'rpe', e.target.value)}
-                                                        className="bg-secondary rounded p-1 text-center text-sm focus:ring-1 ring-primary outline-none w-full min-w-0"
-                                                        placeholder="8"
-                                                    />
-                                                    <button
-                                                        onClick={() => removeSet(currentDay.id, exIndex, setIndex)}
-                                                        className="text-text-muted hover:text-red-400 flex justify-center"
-                                                    >
-                                                        <Trash2 size={14} />
-                                                    </button>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-1.5">
+                                                <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Target Sets</label>
+                                                <div className="flex items-center gap-2">
+                                                    <button 
+                                                        onClick={() => updateTargetSets(currentDay.id, exIndex, (exPattern.targetSets || 3) - 1)}
+                                                        className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center hover:bg-white/10 transition-colors"
+                                                    >-</button>
+                                                    <div className="flex-1 bg-secondary rounded-lg py-2 text-center font-bold text-white">
+                                                        {exPattern.targetSets || 3}
+                                                    </div>
+                                                    <button 
+                                                        onClick={() => updateTargetSets(currentDay.id, exIndex, (exPattern.targetSets || 3) + 1)}
+                                                        className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center hover:bg-white/10 transition-colors"
+                                                    >+</button>
                                                 </div>
-                                            ))}
-
-                                            <button
-                                                onClick={() => addSet(currentDay.id, exIndex)}
-                                                className="w-full py-2 flex items-center justify-center gap-2 text-xs font-bold text-primary hover:bg-primary/10 rounded-lg mt-2 transition-colors"
-                                            >
-                                                <Plus size={14} /> Add Set
-                                            </button>
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Target Reps</label>
+                                                <input
+                                                    type="number"
+                                                    value={exPattern.targetReps || 10}
+                                                    onChange={(e) => updateTargetReps(currentDay.id, exIndex, e.target.value)}
+                                                    className="w-full bg-secondary rounded-lg py-2 text-center font-bold text-white focus:ring-1 ring-primary outline-none"
+                                                    placeholder="10"
+                                                />
+                                            </div>
                                         </div>
                                     )}
                                 </div>
