@@ -14,7 +14,16 @@ export default function WorkoutSession() {
     const searchParams = new URLSearchParams(window.location.search);
     const exerciseIdParam = searchParams.get("exerciseId");
 
-    const { history, exercises, routines, activeRoutineId, addSet, setExerciseNote, onTheGoSession } = useTrainerStore();
+    const { 
+        history, 
+        exercises, 
+        routines, 
+        activeRoutineId, 
+        addSet, 
+        setExerciseNote, 
+        onTheGoSession,
+        updateOTGSets 
+    } = useTrainerStore();
     const routine = routines.find(r => r.id === activeRoutineId);
     const activeDay = routine?.days[routine?.currentDayIndex || 0];
 
@@ -84,6 +93,16 @@ export default function WorkoutSession() {
         }));
         setCardioPlan(newPlan);
     }, [activeExerciseId, isTimed]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // -- AUTO-SAVE NOTES --
+    useEffect(() => {
+        if (activeExerciseId && localNote !== activeExerciseData?.notes) {
+            const timeout = setTimeout(() => {
+                setExerciseNote(activeExerciseId, localNote);
+            }, 1000);
+            return () => clearTimeout(timeout);
+        }
+    }, [localNote, activeExerciseId]);
 
     // -- AUDIO HELPERS --
     // -- AUDIO HELPERS --
@@ -252,6 +271,13 @@ export default function WorkoutSession() {
 
         addSet(newSet);
         setSessionSets(prev => [...prev, newSet]);
+
+        // If we are in On-The-Go mode, immediately update the OTG session state to prevent loss
+        if (isOnTheGo) {
+            const currentOTGExercise = onTheGoSession!.exercises.find(e => e.exerciseId === activeExerciseId);
+            const currentOTGSets = currentOTGExercise?.sets || [];
+            updateOTGSets(activeExerciseId, [...currentOTGSets, newSet]);
+        }
 
         if (!isTimed && !silent) {
             // Track set count per exercise

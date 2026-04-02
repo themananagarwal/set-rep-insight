@@ -10,9 +10,10 @@ interface TrainerState {
     exercises: Exercise[];
     routines: Routine[];
     activeRoutineId: string | null;
-    onTheGoSession: { startTime: number; exercises: { exerciseId: string; targetSets: number }[] } | null;
+    onTheGoSession: { startTime: number; exercises: { exerciseId: string; targetSets: number; sets: WorkoutSet[] }[] } | null;
 
     // Actions
+    updateOTGSets: (exerciseId: string, sets: WorkoutSet[]) => void;
     setUser: (user: UserProfile) => void;
 
     // Routine Management
@@ -163,7 +164,19 @@ export const useTrainerStore = create<TrainerState>()(
                 return {
                     onTheGoSession: {
                         ...state.onTheGoSession,
-                        exercises: [...state.onTheGoSession.exercises, { exerciseId, targetSets: 1 }]
+                        exercises: [...state.onTheGoSession.exercises, { exerciseId, targetSets: 1, sets: [] }]
+                    }
+                };
+            }),
+
+            updateOTGSets: (exerciseId, sets) => set((state) => {
+                if (!state.onTheGoSession) return {};
+                return {
+                    onTheGoSession: {
+                        ...state.onTheGoSession,
+                        exercises: state.onTheGoSession.exercises.map(ex => 
+                            ex.exerciseId === exerciseId ? { ...ex, sets } : ex
+                        )
                     }
                 };
             }),
@@ -231,7 +244,8 @@ export const useTrainerStore = create<TrainerState>()(
                 history: state.history,
                 exercises: state.exercises,
                 routines: state.routines,
-                activeRoutineId: state.activeRoutineId
+                activeRoutineId: state.activeRoutineId,
+                onTheGoSession: state.onTheGoSession
             }),
         }
     )
