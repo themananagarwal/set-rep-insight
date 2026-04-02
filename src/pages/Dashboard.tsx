@@ -1,11 +1,14 @@
 import { useNavigate } from "react-router-dom";
 import { useTrainerStore } from "../lib/store";
+import { useMockBackendStore } from "../lib/mockBackend";
 import { Play, TrendingUp, AlertCircle, Calendar, Activity, Zap, Layers } from "lucide-react";
 import { format } from "date-fns";
 
 export default function Dashboard() {
     const navigate = useNavigate();
     const { user, history, routines, activeRoutineId } = useTrainerStore();
+    const clientTypes = useMockBackendStore(state => state.clientTypes);
+    const isPhysio = user ? (user.type === 'physio' || clientTypes[user.id] === 'physio') : false;
     const routine = routines.find(r => r.id === activeRoutineId);
 
     const lastWorkout = history.length > 0 ? history[history.length - 1] : null;
@@ -45,6 +48,18 @@ export default function Dashboard() {
                 </div>
             </div>
 
+            {isPhysio ? (
+                 <div className="border border-dashed border-blue-500/30 rounded-2xl p-10 text-center space-y-4 mt-8 bg-blue-500/5">
+                    <Activity className="mx-auto text-blue-500/50" size={40} />
+                    <div className="space-y-2">
+                        <h2 className="text-xl font-medium text-white tracking-tight">Physiotherapy Portal</h2>
+                        <p className="text-sm text-text-muted max-w-sm mx-auto leading-relaxed">
+                            Your recovery and treatment plan is managed securely by your provider. Please consult them directly for your protocol and visit schedules.
+                        </p>
+                    </div>
+                </div>
+            ) : (
+            <>
             {/* Active Protocol Card */}
             {routine ? (
                 <div className="group relative overflow-hidden rounded-2xl bg-surface border border-white/5 p-1 transition-all hover:border-white/10">
@@ -163,6 +178,8 @@ export default function Dashboard() {
                     </div>
                 </div>
             </div>
+            </>
+            )}
         </div>
     );
 }

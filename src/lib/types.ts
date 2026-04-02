@@ -1,3 +1,5 @@
+export type ClientType = "gym" | "physio";
+
 export type UserProfile = {
     id: string;
     email: string;
@@ -6,9 +8,10 @@ export type UserProfile = {
     role: "admin" | "client";
     trainerId?: string; // If role is client, who manages them
     name: string;
+    type?: ClientType; // "gym" (default) or "physio"
     
     // Fitness Stats (optional for admins)
-    gender?: "male" | "female";
+    gender?: "male" | "female" | "other";
     weight?: number;
     height?: number; // cm
     goalWeight?: number; 
@@ -81,4 +84,46 @@ export type Prediction = {
     suggestedWeight: number;
     suggestedReps: number;
     reasoning: string;
+};
+
+// ── SESSION SYSTEM ───────────────────────────────────────────────────────────
+
+export type SessionPackage = {
+    id: string;
+    clientId: string;
+    trainerId: string;
+    totalSessions: number;
+    sessionsUsed: number;
+    sessionsRemaining: number;
+    expiryDate?: number; // Unix timestamp
+    createdAt: number;
+};
+
+export type SessionLog = {
+    id: string;
+    clientId: string;
+    trainerId: string;
+    timestamp: number;
+    verificationMethod: 'qr_scan' | 'manual';
+    status: 'completed';
+    nonce: string; // For dedup
+};
+
+// ── PHYSIO SYSTEM ────────────────────────────────────────────────────────────
+
+export type PhysioEvaluation = {
+    clientId: string;
+    symptoms: string;
+    painPoints: string;
+    preliminaryDiagnosis: string;
+    finalDiagnosis: string;
+};
+
+export type PhysioSessionNote = {
+    id: string;
+    clientId: string;
+    date: number; // timestamp
+    patientFeedback: string;
+    treatmentDone: string;
+    remarks: string;
 };

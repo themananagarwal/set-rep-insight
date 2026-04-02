@@ -27,7 +27,7 @@ export default function ProfileSetup() {
     useEffect(() => {
         if (formData.weight && formData.height && formData.gender && showEstimates) {
             const bmi = calculateBMI(formData.weight, formData.height);
-            const bf = estimateBodyFat(bmi, formData.gender);
+            const bf = estimateBodyFat(bmi, (formData.gender === 'other' ? 'male' : formData.gender) as 'male' | 'female');
             const idealW = getIdealWeight(formData.height);
 
             setFormData(prev => ({

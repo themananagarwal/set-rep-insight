@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { UserProfile, Routine, WorkoutSet } from "./types";
+import type { UserProfile, Routine, WorkoutSet, SessionPackage, SessionLog, ClientType, PhysioEvaluation, PhysioSessionNote } from "./types";
 
 interface MockBackendState {
     users: UserProfile[];
@@ -12,16 +12,38 @@ interface MockBackendState {
     updateUser: (id: string, updates: Partial<UserProfile>) => void;
     deleteUser: (id: string) => void;
     resetClientPassword: (email: string, newPass: string) => boolean;
-    
-    // Sync actions (called by TrainerStore when current user changes things)
+
+    // Sync actions
     syncUserData: (userId: string, routines: Routine[], history: WorkoutSet[]) => void;
-    
+
     // Admin specific
     getClientsForTrainer: (trainerId: string) => UserProfile[];
     assignRoutineToClient: (clientId: string, routine: Routine) => void;
+
+    // Custom exercises
+    customExercises: Array<{ id: string; name: string; primaryAxis: string; trackingType: 'reps' | 'time'; trainerId: string }>;
+    addCustomExercise: (ex: { name: string; primaryAxis: string; trackingType: 'reps' | 'time'; trainerId: string }) => void;
+
+    // ── SESSION SYSTEM ────────────────────────────────────────────────────────
+    sessionPackages: SessionPackage[];
+    sessionLogs: SessionLog[];
+    usedNonces: string[];
+
+    upsertSessionPackage: (pkg: Omit<SessionPackage, 'id' | 'createdAt'>) => SessionPackage;
+    logSession: (clientId: string, trainerId: string, nonce: string, method: 'qr_scan' | 'manual') => { success: boolean; error?: string };
+    getSessionPackage: (clientId: string) => SessionPackage | undefined;
+    getSessionLogs: (clientId: string) => SessionLog[];
+
+    // ── PHYSIO ────────────────────────────────────────────────────────────────
+    clientTypes: Record<string, ClientType>;
+    physioEvaluations: Record<string, PhysioEvaluation>;
+    physioSessionNotes: PhysioSessionNote[];
+
+    setClientType: (clientId: string, type: ClientType) => void;
+    savePhysioEvaluation: (clientId: string, evaluation: PhysioEvaluation) => void;
+    addPhysioSessionNote: (note: Omit<PhysioSessionNote, 'id'>) => PhysioSessionNote;
 }
 
-// Initial Admin User for POC
 const initialAdmin: UserProfile = {
     id: "admin-1",
     email: "admin@test.com",
@@ -30,7 +52,6 @@ const initialAdmin: UserProfile = {
     name: "Master Trainer",
 };
 
-// Initial Client User for POC
 const initialClient: UserProfile = {
     id: "client-1",
     email: "client@test.com",
@@ -51,12 +72,16 @@ export const useMockBackendStore = create<MockBackendState>()(
             users: [initialAdmin, initialClient],
             routinesByUserId: {},
             historyByUserId: {},
+            customExercises: [],
+            sessionPackages: [],
+            sessionLogs: [],
+            usedNonces: [],
+            clientTypes: {},
+            physioEvaluations: {},
+            physioSessionNotes: [],
 
             addUser: (userData) => {
-                const newUser: UserProfile = {
-                    ...userData,
-                    id: crypto.randomUUID(),
-                };
+                const newUser: UserProfile = { ...userData, id: crypto.randomUUID() };
                 set((state) => ({
                     users: [...state.users, newUser],
                     routinesByUserId: { ...state.routinesByUserId, [newUser.id]: [] },
@@ -73,9 +98,7 @@ export const useMockBackendStore = create<MockBackendState>()(
                 const state = get();
                 const user = state.users.find(u => u.email.toLowerCase() === email.toLowerCase());
                 if (user) {
-                    set((s) => ({
-                        users: s.users.map(u => u.id === user.id ? { ...u, password: newPass } : u)
-                    }));
+                    set((s) => ({ users: s.users.map(u => u.id === user.id ? { ...u, password: newPass } : u) }));
                     return true;
                 }
                 return false;
@@ -86,7 +109,6 @@ export const useMockBackendStore = create<MockBackendState>()(
                 delete newRoutines[id];
                 const newHistory = { ...state.historyByUserId };
                 delete newHistory[id];
-                
                 return {
                     users: state.users.filter(u => u.id !== id),
                     routinesByUserId: newRoutines,
@@ -100,25 +122,92 @@ export const useMockBackendStore = create<MockBackendState>()(
             })),
 
             getClientsForTrainer: (trainerId) => {
-                const state = get();
-                return state.users.filter(u => u.role === "client" && u.trainerId === trainerId);
+                return get().users.filter(u => u.role === "client" && u.trainerId === trainerId);
             },
+
+            addCustomExercise: (ex) => set(state => ({
+                customExercises: [...state.customExercises, { ...ex, id: `custom_${Date.now()}` }]
+            })),
 
             assignRoutineToClient: (clientId, routine) => set((state) => {
                 const clientRoutines = state.routinesByUserId[clientId] || [];
-                // Check if already assigned to avoid duplicates (by ID)
                 if (clientRoutines.some(r => r.id === routine.id)) return state;
-                
-                return {
-                    routinesByUserId: {
-                        ...state.routinesByUserId,
-                        [clientId]: [...clientRoutines, routine]
-                    }
-                };
+                return { routinesByUserId: { ...state.routinesByUserId, [clientId]: [...clientRoutines, routine] } };
             }),
+
+            // ── SESSION ACTIONS ───────────────────────────────────────────────
+
+            upsertSessionPackage: (pkg) => {
+                const state = get();
+                const existing = state.sessionPackages.find(p => p.clientId === pkg.clientId);
+                if (existing) {
+                    const updated: SessionPackage = { ...existing, ...pkg };
+                    set(s => ({ sessionPackages: s.sessionPackages.map(p => p.clientId === pkg.clientId ? updated : p) }));
+                    return updated;
+                }
+                const newPkg: SessionPackage = { ...pkg, id: crypto.randomUUID(), createdAt: Date.now() };
+                set(s => ({ sessionPackages: [...s.sessionPackages, newPkg] }));
+                return newPkg;
+            },
+
+            logSession: (clientId, trainerId, nonce, method) => {
+                const state = get();
+
+                if (state.usedNonces.includes(nonce)) {
+                    return { success: false, error: 'This QR code has already been used.' };
+                }
+
+                const pkg = state.sessionPackages.find(p => p.clientId === clientId);
+                if (!pkg) return { success: false, error: 'No session package found for this client.' };
+                if (pkg.sessionsRemaining <= 0) return { success: false, error: 'No sessions remaining in this package.' };
+                if (pkg.expiryDate && Date.now() > pkg.expiryDate) {
+                    return { success: false, error: 'Session package has expired.' };
+                }
+
+                const log: SessionLog = {
+                    id: crypto.randomUUID(),
+                    clientId,
+                    trainerId,
+                    timestamp: Date.now(),
+                    verificationMethod: method,
+                    status: 'completed',
+                    nonce,
+                };
+
+                set(s => ({
+                    sessionLogs: [...s.sessionLogs, log],
+                    usedNonces: [...s.usedNonces, nonce],
+                    sessionPackages: s.sessionPackages.map(p =>
+                        p.clientId === clientId
+                            ? { ...p, sessionsUsed: p.sessionsUsed + 1, sessionsRemaining: p.sessionsRemaining - 1 }
+                            : p
+                    )
+                }));
+                return { success: true };
+            },
+
+            getSessionPackage: (clientId) => get().sessionPackages.find(p => p.clientId === clientId),
+
+            getSessionLogs: (clientId) => get().sessionLogs
+                .filter(l => l.clientId === clientId)
+                .sort((a, b) => b.timestamp - a.timestamp),
+
+            // ── PHYSIO ACTIONS ───────────────────────────────────────────────
+
+            setClientType: (clientId, type) => set(s => ({
+                clientTypes: { ...s.clientTypes, [clientId]: type }
+            })),
+
+            savePhysioEvaluation: (clientId, evaluation) => set(s => ({
+                physioEvaluations: { ...s.physioEvaluations, [clientId]: evaluation }
+            })),
+
+            addPhysioSessionNote: (noteData) => {
+                const newNote: PhysioSessionNote = { ...noteData, id: crypto.randomUUID() };
+                set(s => ({ physioSessionNotes: [...s.physioSessionNotes, newNote] }));
+                return newNote;
+            },
         }),
-        {
-            name: "pt_mock_backend",
-        }
+        { name: "pt_mock_backend" }
     )
 );

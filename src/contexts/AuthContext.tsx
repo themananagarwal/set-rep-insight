@@ -1,5 +1,7 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import type { UserProfile } from '../lib/types';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { getProfile } from '../lib/db';
 import { useMockBackendStore } from '../lib/mockBackend';
 import { useTrainerStore } from '../lib/store';
 
@@ -8,119 +10,232 @@ interface AuthContextType {
     loading: boolean;
     login: (email: string, password?: string) => Promise<{ error?: string }>;
     logout: () => Promise<void>;
-    viewMode: "admin" | "client";
-    switchViewMode: (mode: "admin" | "client") => void;
+    forgotPassword: (email: string) => Promise<{ error?: string }>;
+    viewMode: 'admin' | 'client';
+    switchViewMode: (mode: 'admin' | 'client') => void;
+    sessionData: any | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+function hydrateClientStore(userId: string) {
+    if (isSupabaseConfigured) return;
+    const { routinesByUserId, historyByUserId } = useMockBackendStore.getState();
+    useTrainerStore.setState({
+        routines: routinesByUserId[userId] || [],
+        history: historyByUserId[userId] || [],
+    });
+}
+
+/** Fetch profile, retrying up to `retries` times to handle DB trigger lag. */
+async function fetchProfileWithRetry(userId: string, retries = 4): Promise<UserProfile | null> {
+    for (let i = 0; i < retries; i++) {
+        try {
+            const p = await getProfile(userId);
+            if (p) return p;
+        } catch { /* ignore transient errors */ }
+        if (i < retries - 1) await new Promise(r => setTimeout(r, 500));
+    }
+    return null;
+}
+
+// ── Provider ───────────────────────────────────────────────────────────────
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<UserProfile | null>(null);
+    const [sessionData, setSessionData] = useState<any | null>(null);
     const [loading, setLoading] = useState(true);
-    const [viewMode, setViewMode] = useState<"admin" | "client">("client");
-
-    const backendUsers = useMockBackendStore(state => state.users);
-    const routinesByUserId = useMockBackendStore(state => state.routinesByUserId);
-    const historyByUserId = useMockBackendStore(state => state.historyByUserId);
-
+    const [viewMode, setViewMode] = useState<'admin' | 'client'>('client');
     const trainerStore = useTrainerStore();
 
-    // Auto-login from memory (mock session persistence)
+    // Guard against setting state after unmount
+    const mounted = useRef(true);
+
+    // ── View mode helpers ─────────────────────────────────────────────────
+    const applyViewMode = (profile: UserProfile) => {
+        const saved = localStorage.getItem('pt_view_mode');
+        const mode: 'admin' | 'client' =
+            (saved === 'admin' && profile.role === 'admin') ? 'admin' : 'client';
+        if (mounted.current) setViewMode(mode);
+        return mode;
+    };
+
+    // ── Session init ──────────────────────────────────────────────────────
     useEffect(() => {
-        const savedSession = localStorage.getItem('pt_mock_session');
-        if (savedSession) {
-            try {
-                const parsed = JSON.parse(savedSession);
-                if (parsed.userId) {
-                    const foundUser = backendUsers.find(u => u.id === parsed.userId);
+        mounted.current = true;
+
+        if (!isSupabaseConfigured) {
+            // ── Mock mode ──────────────────────────────────────────────
+            const savedSession = localStorage.getItem('pt_mock_session');
+            if (savedSession) {
+                try {
+                    const { userId } = JSON.parse(savedSession);
+                    const foundUser = useMockBackendStore.getState().users.find(u => u.id === userId);
                     if (foundUser) {
                         setUser(foundUser);
                         trainerStore.setUser(foundUser);
-                        
-                        // Hydrate view mode
-                        const savedMode = localStorage.getItem('pt_view_mode');
-                        if (savedMode === 'admin' && foundUser.role === 'admin') {
-                            setViewMode('admin');
-                        } else {
-                            setViewMode('client');
-                            // If they are a client (or an admin impersonating a client), hydrate their workouts
-                            useTrainerStore.setState({
-                               routines: routinesByUserId[foundUser.id] || [],
-                               history: historyByUserId[foundUser.id] || []
-                           });
-                        }
+                        const mode = applyViewMode(foundUser);
+                        if (mode === 'client') hydrateClientStore(foundUser.id);
+                    }
+                } catch { /* ignore */ }
+            }
+            setLoading(false);
+            return () => { mounted.current = false; };
+        }
+
+        // ── Supabase mode ─────────────────────────────────────────────
+        // The recommended pattern: rely on onAuthStateChange for ALL hydration.
+        // INITIAL_SESSION fires synchronously on mount if a session exists in
+        // localStorage — this fires BEFORE getSession().then() resolves.
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+            (event, session) => {
+                console.log('[Auth] event:', event, 'user:', session?.user?.id ?? 'none');
+
+                if (event === 'SIGNED_OUT' || (!session && event !== 'INITIAL_SESSION')) {
+                    if (mounted.current) {
+                        setSessionData(null);
+                    }
+                    return;
+                }
+
+                if (
+                    event === 'INITIAL_SESSION' ||
+                    event === 'SIGNED_IN' ||
+                    event === 'TOKEN_REFRESHED' ||
+                    event === 'USER_UPDATED'
+                ) {
+                    if (mounted.current) {
+                        setSessionData(session || null);
                     }
                 }
-            } catch (e) {
-                console.error("Session parse error", e);
             }
-        }
-        setLoading(false);
+        );
+
+        // Safety net: if onAuthStateChange never fires (e.g. network issue),
+        // unblock the loading spinner after 6 seconds.
+        const safetyTimeout = setTimeout(() => {
+            if (mounted.current) setLoading(false);
+        }, 6000);
+
+        return () => {
+            mounted.current = false;
+            subscription.unsubscribe();
+            clearTimeout(safetyTimeout);
+        };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []); // Only run once on mount
+    }, []);
 
-    const login = async (email: string, password?: string) => {
-        setLoading(true);
-        // Simulate network
-        await new Promise(resolve => setTimeout(resolve, 300));
+    // Effect: Decouple profile fetching from Auth event loop to prevent getSession deadlock!
+    useEffect(() => {
+        let active = true;
 
-        const foundUser = backendUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
-        
-        if (!foundUser) {
+        if (!isSupabaseConfigured) return;
+
+        if (!sessionData?.user?.id) {
+            setUser(null);
+            trainerStore.setUser(null);
+            setViewMode('client');
             setLoading(false);
-            return { error: 'Invalid credentials or user does not exist.' };
+            return;
         }
 
-        // Mock password check
-        if (password && foundUser.password && foundUser.password !== password) {
-             setLoading(false);
-             return { error: 'Invalid credentials.' };
+        const loadProfile = async () => {
+            setLoading(true);
+            const profile = await fetchProfileWithRetry(sessionData.user.id);
+            if (!active) return;
+
+            if (profile) {
+                setUser(profile);
+                trainerStore.setUser(profile);
+                applyViewMode(profile);
+            } else {
+                console.warn('[Auth] Profile not found for user:', sessionData.user.id);
+                setUser(null);
+                trainerStore.setUser(null);
+            }
+            setLoading(false);
+        };
+
+        loadProfile();
+
+        return () => { active = false; };
+    }, [sessionData?.user?.id]);
+
+    // ── LOGIN ──────────────────────────────────────────────────────────────
+    const login = async (email: string, password?: string): Promise<{ error?: string }> => {
+        if (!isSupabaseConfigured) {
+            // Mock fallback
+            await new Promise(r => setTimeout(r, 300));
+            const backendUsers = useMockBackendStore.getState().users;
+            const foundUser = backendUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
+            if (!foundUser) return { error: 'Invalid credentials.' };
+            if (password && foundUser.password && foundUser.password !== password) {
+                return { error: 'Invalid credentials.' };
+            }
+            setUser(foundUser);
+            localStorage.setItem('pt_mock_session', JSON.stringify({ userId: foundUser.id }));
+            trainerStore.setUser(foundUser);
+            const mode = foundUser.role === 'admin' ? 'admin' : 'client';
+            setViewMode(mode);
+            localStorage.setItem('pt_view_mode', mode);
+            if (mode === 'client') hydrateClientStore(foundUser.id);
+            return {};
         }
 
-        setUser(foundUser);
-        localStorage.setItem('pt_mock_session', JSON.stringify({ userId: foundUser.id }));
-        
-        // Sync to trainer store
-        trainerStore.setUser(foundUser);
+        // Supabase: signInWithPassword triggers onAuthStateChange(SIGNED_IN)
+        // which handles profile hydration — no need to do it here.
+        const { error } = await supabase.auth.signInWithPassword({
+            email,
+            password: password || '',
+        });
+        if (error) return { error: error.message };
 
-        // Determine view mode
-        const initialMode = foundUser.role === "admin" ? "admin" : "client";
-        setViewMode(initialMode);
-        localStorage.setItem('pt_view_mode', initialMode);
-        
-        // Sync history and routines if entering client mode
-        if (initialMode === "client") {
-            const routines = useMockBackendStore.getState().routinesByUserId[foundUser.id] || [];
-            const history = useMockBackendStore.getState().historyByUserId[foundUser.id] || [];
-            useTrainerStore.setState({ routines, history });
-        }
+        // Set viewMode after profile is hydrated by onAuthStateChange.
+        // We wait briefly for the listener to run.
+        await new Promise(r => setTimeout(r, 800));
+        const currentUser = useMockBackendStore.getState; // not used, just a tick
+        void currentUser;
 
-        setLoading(false);
         return {};
     };
 
-    const switchViewMode = (mode: "admin" | "client") => {
+    // ── FORGOT PASSWORD ────────────────────────────────────────────────────
+    const forgotPassword = async (email: string): Promise<{ error?: string }> => {
+        if (!isSupabaseConfigured) return {};
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: `${window.location.origin}/reset-password`,
+        });
+        if (error) return { error: error.message };
+        return {};
+    };
+
+    // ── SWITCH VIEW MODE ───────────────────────────────────────────────────
+    const switchViewMode = (mode: 'admin' | 'client') => {
         if (!user) return;
         setViewMode(mode);
         localStorage.setItem('pt_view_mode', mode);
-
-        if (mode === "client") {
-            // Hydrate client data when switching into client mode
-            const routines = useMockBackendStore.getState().routinesByUserId[user.id] || [];
-            const history = useMockBackendStore.getState().historyByUserId[user.id] || [];
-            useTrainerStore.setState({ routines, history });
+        if (mode === 'client' && !isSupabaseConfigured) {
+            hydrateClientStore(user.id);
         }
     };
 
+    // ── LOGOUT ─────────────────────────────────────────────────────────────
     const logout = async () => {
-        setUser(null);
+        if (isSupabaseConfigured) {
+            await supabase.auth.signOut(); // triggers SIGNED_OUT in listener
+        } else {
+            setUser(null);
+        }
         localStorage.removeItem('pt_mock_session');
         localStorage.removeItem('pt_view_mode');
-        trainerStore.setUser(null); // Clear local store user
+        trainerStore.setUser(null);
+        useTrainerStore.setState({ routines: [], history: [] });
     };
 
     return (
-        <AuthContext.Provider value={{ user, loading, login, logout, viewMode, switchViewMode }}>
+        <AuthContext.Provider value={{ user, loading, login, logout, forgotPassword, viewMode, switchViewMode, sessionData }}>
             {children}
         </AuthContext.Provider>
     );
@@ -128,8 +243,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth() {
     const context = useContext(AuthContext);
-    if (context === undefined) {
-        throw new Error('useAuth must be used within an AuthProvider');
-    }
+    if (!context) throw new Error('useAuth must be used within an AuthProvider');
     return context;
 }

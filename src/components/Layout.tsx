@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
-import { Dumbbell, LayoutDashboard, History, User } from "lucide-react";
+import { Dumbbell, LayoutDashboard, History, User, QrCode } from "lucide-react";
 import clsx from "clsx";
 import { ReloadPrompt } from "./ReloadPrompt";
 import { useAuth } from "../contexts/AuthContext";
@@ -12,6 +12,7 @@ export function Layout() {
         { icon: LayoutDashboard, label: "Home", path: "/" },
         { icon: Dumbbell, label: "Workout", path: "/workout" },
         { icon: History, label: "History", path: "/history" },
+        { icon: QrCode, label: "Sessions", path: "/sessions" },
         { icon: User, label: "Profile", path: "/profile" },
     ];
 

@@ -17,7 +17,7 @@ export default function AdminDashboard() {
 
     // Form State
     const [newClient, setNewClient] = useState({
-        name: '', email: '', phone: '', password: '', height: '', weight: '', goal: 'hypertrophy', role: 'client' as 'client' | 'admin'
+        name: '', email: '', phone: '', password: '', height: '', weight: '', goal: 'hypertrophy', role: 'client' as 'client' | 'admin', type: 'gym' as 'gym' | 'physio'
     });
 
     const users = useMockBackendStore(state => state.users);
@@ -28,12 +28,22 @@ export default function AdminDashboard() {
     const addClient = useMockBackendStore(state => state.addUser);
     const deleteUser = useMockBackendStore(state => state.deleteUser);
     const updateUser = useMockBackendStore(state => state.updateUser);
+    const setClientTypeMock = useMockBackendStore(state => state.setClientType);
+    const clientTypes = useMockBackendStore(state => state.clientTypes);
+    const physioEvaluations = useMockBackendStore(state => state.physioEvaluations);
+    const physioSessionNotes = useMockBackendStore(state => state.physioSessionNotes);
+    const savePhysioEvaluation = useMockBackendStore(state => state.savePhysioEvaluation);
+    const addPhysioSessionNote = useMockBackendStore(state => state.addPhysioSessionNote);
+
+    const [evalForm, setEvalForm] = useState({ symptoms: '', painPoints: '', preliminaryDiagnosis: '', finalDiagnosis: '' });
+    const [noteForm, setNoteForm] = useState({ patientFeedback: '', treatmentDone: '', remarks: '' });
+    const [isSavingEval, setIsSavingEval] = useState(false);
 
     const handleAddClientSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!user) return;
         
-        addClient({
+        const finalUser = addClient({
             email: newClient.email.toLowerCase(),
             phone: newClient.phone,
             password: newClient.password,
@@ -45,9 +55,13 @@ export default function AdminDashboard() {
             height: Number(newClient.height) || undefined,
             goal: newClient.goal as any,
             activityLevel: "active",
+            type: newClient.type,
         });
+        if (newClient.role === 'client') {
+            setClientTypeMock(finalUser.id, newClient.type);
+        }
         setIsAddingClient(false);
-        setNewClient({ name: '', email: '', phone: '', password: '', height: '', weight: '', goal: 'hypertrophy', role: 'client' });
+        setNewClient({ name: '', email: '', phone: '', password: '', height: '', weight: '', goal: 'hypertrophy', role: 'client', type: 'gym' });
     };
 
     const generatePassword = () => {
@@ -255,6 +269,9 @@ export default function AdminDashboard() {
                             </div>
                         </div>
 
+                        {/* ── GYM MODULE RENDER ── */}
+                        {(!clientTypes[selectedClient.id] || clientTypes[selectedClient.id] === 'gym') && (
+                        <>
                         {/* Assigned Programs Section */}
                         <div>
                             <div className="flex items-center justify-between mb-6">
@@ -299,6 +316,142 @@ export default function AdminDashboard() {
                                 <p className="text-zinc-500">Client's recent workout logs will appear here.</p>
                             </div>
                         </div>
+                        </>
+                        )}
+                        
+                        {/* ── PHYSIO MODULE RENDER ── */}
+                        {clientTypes[selectedClient.id] === 'physio' && (
+                            <div className="space-y-8 mt-8">
+                                {/* EVALUATION FORM */}
+                                <div className="bg-zinc-900 border border-blue-500/20 rounded-2xl p-6">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h3 className="text-2xl font-bold flex items-center gap-2 text-blue-400">
+                                            <Activity size={24} />
+                                            Medical Evaluation
+                                        </h3>
+                                        {isSavingEval ? (
+                                            <span className="text-blue-400 font-bold animate-pulse text-sm">Saving...</span>
+                                        ) : (
+                                            <button 
+                                                onClick={async () => {
+                                                    setIsSavingEval(true);
+                                                    savePhysioEvaluation(selectedClient.id, { clientId: selectedClient.id, ...evalForm });
+                                                    await new Promise(r => setTimeout(r, 600)); // fake delay
+                                                    setIsSavingEval(false);
+                                                }}
+                                                className="text-sm bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-full font-bold transition-colors"
+                                            >
+                                                Save Evaluation
+                                            </button>
+                                        )}
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium text-zinc-400">Symptoms</label>
+                                            <textarea 
+                                                value={evalForm.symptoms || physioEvaluations[selectedClient.id]?.symptoms || ''} 
+                                                onChange={e => setEvalForm({...evalForm, symptoms: e.target.value})} 
+                                                className="w-full bg-zinc-950 border border-white/10 rounded-xl p-3 text-white focus:border-blue-500 outline-none min-h-[100px]" 
+                                                placeholder="Describe symptoms..." 
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium text-zinc-400">Pain Points</label>
+                                            <textarea 
+                                                value={evalForm.painPoints || physioEvaluations[selectedClient.id]?.painPoints || ''} 
+                                                onChange={e => setEvalForm({...evalForm, painPoints: e.target.value})} 
+                                                className="w-full bg-zinc-950 border border-white/10 rounded-xl p-3 text-white focus:border-blue-500 outline-none min-h-[100px]" 
+                                                placeholder="Where does it hurt?" 
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium text-zinc-400">Preliminary Diagnosis</label>
+                                            <textarea 
+                                                value={evalForm.preliminaryDiagnosis || physioEvaluations[selectedClient.id]?.preliminaryDiagnosis || ''} 
+                                                onChange={e => setEvalForm({...evalForm, preliminaryDiagnosis: e.target.value})} 
+                                                className="w-full bg-zinc-950 border border-white/10 rounded-xl p-3 text-white focus:border-blue-500 outline-none min-h-[100px]" 
+                                                placeholder="Initial thoughts..." 
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium text-zinc-400">Final Diagnosis</label>
+                                            <textarea 
+                                                value={evalForm.finalDiagnosis || physioEvaluations[selectedClient.id]?.finalDiagnosis || ''} 
+                                                onChange={e => setEvalForm({...evalForm, finalDiagnosis: e.target.value})} 
+                                                className="w-full bg-zinc-950 border border-white/10 rounded-xl p-3 text-white focus:border-blue-500 outline-none min-h-[100px]" 
+                                                placeholder="Formal diagnosis..." 
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* SESSION NOTES */}
+                                <div>
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h3 className="text-2xl font-bold flex items-center gap-2">
+                                            <BookOpen className="text-zinc-300" />
+                                            Visit Notes
+                                        </h3>
+                                    </div>
+                                    
+                                    <div className="bg-zinc-900/50 border border-white/5 rounded-2xl p-5 mb-6 space-y-4">
+                                        <div className="grid grid-cols-3 gap-4">
+                                            <div className="space-y-1">
+                                                <label className="text-xs font-semibold text-zinc-500 uppercase">Patient Feedback</label>
+                                                <input type="text" value={noteForm.patientFeedback} onChange={e => setNoteForm({...noteForm, patientFeedback: e.target.value})} className="w-full bg-zinc-950 border border-white/5 rounded-lg p-2 text-sm text-white focus:border-blue-500 outline-none" placeholder="How do they feel today?" />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-xs font-semibold text-zinc-500 uppercase">Treatment Done</label>
+                                                <input type="text" value={noteForm.treatmentDone} onChange={e => setNoteForm({...noteForm, treatmentDone: e.target.value})} className="w-full bg-zinc-950 border border-white/5 rounded-lg p-2 text-sm text-white focus:border-blue-500 outline-none" placeholder="Exercises, adjustments..." />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-xs font-semibold text-zinc-500 uppercase">Remarks</label>
+                                                <div className="flex gap-2">
+                                                    <input type="text" value={noteForm.remarks} onChange={e => setNoteForm({...noteForm, remarks: e.target.value})} className="flex-1 bg-zinc-950 border border-white/5 rounded-lg p-2 text-sm text-white focus:border-blue-500 outline-none" placeholder="Notes for next time" />
+                                                    <button 
+                                                        onClick={() => {
+                                                            if (!noteForm.treatmentDone) return;
+                                                            addPhysioSessionNote({ clientId: selectedClient.id, date: Date.now(), ...noteForm });
+                                                            setNoteForm({ patientFeedback: '', treatmentDone: '', remarks: '' });
+                                                        }}
+                                                        className="bg-blue-600 hover:bg-blue-500 text-white rounded-lg px-4 font-bold text-sm transition-colors"
+                                                    >
+                                                        Add
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        {physioSessionNotes.filter(n => n.clientId === selectedClient.id).sort((a,b) => b.date - a.date).map(note => (
+                                            <div key={note.id} className="bg-zinc-900 border border-white/10 rounded-xl p-4 flex flex-col gap-2">
+                                                <div className="flex justify-between items-center pb-2 border-b border-white/5">
+                                                    <span className="text-xs font-bold text-blue-400 capitalize">{new Date(note.date).toLocaleDateString()}</span>
+                                                </div>
+                                                <div className="grid grid-cols-3 gap-4 mt-2">
+                                                    <div>
+                                                        <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Feedback</p>
+                                                        <p className="text-sm text-zinc-300">{note.patientFeedback || '--'}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Treatment</p>
+                                                        <p className="text-sm text-white">{note.treatmentDone}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Remarks</p>
+                                                        <p className="text-sm text-zinc-400">{note.remarks || '--'}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                        {physioSessionNotes.filter(n => n.clientId === selectedClient.id).length === 0 && (
+                                            <p className="text-zinc-600 italic text-center text-sm py-4">No session notes recorded yet.</p>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
 
@@ -428,6 +581,15 @@ export default function AdminDashboard() {
                                         <option value="admin">Trainer / Admin</option>
                                     </select>
                                 </div>
+                                {newClient.role === 'client' && (
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium text-zinc-400">Client Type *</label>
+                                        <select required value={newClient.type} onChange={e => setNewClient({...newClient, type: e.target.value as 'gym'|'physio'})} className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-red-500/50 appearance-none cursor-pointer">
+                                            <option value="gym">Gym Client</option>
+                                            <option value="physio">Physiotherapy Client</option>
+                                        </select>
+                                    </div>
+                                )}
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium text-zinc-400">Goal *</label>
                                     <select required value={newClient.goal} onChange={e => setNewClient({...newClient, goal: e.target.value})} className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-red-500/50 appearance-none cursor-pointer">

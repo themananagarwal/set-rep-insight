@@ -17,6 +17,8 @@ import HistoryPage from "./pages/History";
 import Profile from "./pages/Profile";
 import AdminDashboard from "./pages/AdminDashboard";
 import ProfileSetup from "./pages/ProfileSetup";
+import Sessions from "./pages/Sessions";
+import ResetPassword from "./pages/ResetPassword";
 
 // Protected Route Component
 function ProtectedRoute({ children, reqRole }: { children: React.ReactNode, reqRole?: "admin" | "client" }) {
@@ -127,8 +129,12 @@ function App() {
             <Route path="/workout/builder/:id" element={<WorkoutBuilder />} />
 
             <Route path="/history" element={<HistoryPage />} />
+            <Route path="/sessions" element={<Sessions />} />
             <Route path="/profile" element={<Profile />} />
           </Route>
+
+          {/* Password Reset — must be public and before catch-all */}
+          <Route path="/reset-password" element={<ResetPassword />} />
 
           {/* Catch-all/Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
