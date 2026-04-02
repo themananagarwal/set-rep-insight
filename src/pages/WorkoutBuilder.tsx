@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTrainerStore } from "../lib/store";
 import type { Routine, WorkoutExercisePattern, TargetSet } from "../lib/types";
-import { Save, Plus, Trash2, ChevronDown, Copy, Dumbbell, Clock, Search } from "lucide-react";
+import { Save, Plus, Trash2, Copy, Dumbbell, Clock, Search } from "lucide-react";
 import { generateID } from "../lib/utils";
 import ExercisePicker from "../components/ExercisePicker";
 import clsx from "clsx";

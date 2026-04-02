@@ -151,10 +151,10 @@ export const predictNextSet = (
 };
 
 export const INITIAL_EXERCISES: Exercise[] = [
-    { id: "sq", name: "Back Squat", muscle: "Legs", type: "compound" },
-    { id: "bp", name: "Bench Press", muscle: "Chest", type: "compound" },
-    { id: "dl", name: "Deadlift", muscle: "Back", type: "compound" },
-    { id: "ohp", name: "Overhead Press", muscle: "Shoulders", type: "compound" },
-    { id: "pu", name: "Pull Up", muscle: "Back", type: "compound" },
-    { id: "db_curl", name: "Dumbbell Curl", muscle: "Biceps", type: "isolation" },
+    { id: "sq", name: "Back Squat", muscle: "Legs", trackingType: "reps" },
+    { id: "bp", name: "Bench Press", muscle: "Chest", trackingType: "reps" },
+    { id: "dl", name: "Deadlift", muscle: "Back", trackingType: "reps" },
+    { id: "ohp", name: "Overhead Press", muscle: "Shoulders", trackingType: "reps" },
+    { id: "pu", name: "Pull Up", muscle: "Back", trackingType: "reps" },
+    { id: "db_curl", name: "Dumbbell Curl", muscle: "Biceps", trackingType: "reps" },
 ];
