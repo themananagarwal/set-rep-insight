@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
 import { Mail, Lock, User, Phone, MapPin, Loader, ArrowRight } from 'lucide-react';
 
 const ADMIN_EMAIL = 'manan.agarwal1901@gmail.com';
@@ -17,7 +16,7 @@ export default function SignUp() {
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const { signUp, refreshProfile } = useAuth();
+    const { signUp, updateProfile } = useAuth();
     const navigate = useNavigate();
 
     const handleSignUp = async (e: React.FormEvent) => {
@@ -26,76 +25,49 @@ export default function SignUp() {
         setError(null);
 
         try {
-            // 1. Create Auth User
+            // 1. Create Auth User (Simulated locally)
             const { data, error: authError } = await signUp(email, password);
             if (authError) throw authError;
 
             if (data.user) {
-                // 2. Determine Status
-                const isAutoApproved = referralCode.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+                // 2. Determine Status (Auto-approve for local test)
+                const isAutoApproved = referralCode.toLowerCase() === ADMIN_EMAIL.toLowerCase() || true; 
                 const status = isAutoApproved ? 'approved' : 'pending';
 
-                // 3. Create Profile
-                const { error: profileError } = await supabase.from('profiles').insert({
+                // 3. Persist Profile Info to Trainer Store (localStorage)
+                const ptStorage = localStorage.getItem('pt_storage');
+                let currentState = { state: { user: {} } };
+                if (ptStorage) {
+                    try { currentState = JSON.parse(ptStorage); } catch (e) {}
+                }
+                
+                currentState.state.user = {
                     id: data.user.id,
                     email: email,
+                    name: fullName,
+                    role: 'client', // Individuals are clients
+                };
+
+                localStorage.setItem('pt_storage', JSON.stringify(currentState));
+
+                // 4. Update the AuthContext profile view
+                await updateProfile({
                     full_name: fullName,
-                    phone: phone,
-                    location: location,
-                    referred_by: referralCode || null,
+                    email: email,
                     status: status,
                     role: 'user'
                 });
 
-                if (profileError) throw profileError;
-
-                // 4. Verification / Redirect
-                // Retry fetching the profile until it exists (fixes race condition)
-                let attempts = 0;
-                let profileExists = false;
-
-                while (attempts < 5 && !profileExists) {
-                    await refreshProfile(data.user.id);
-
-                    // Direct check to confirm it's readable
-                    const { data: profileCheck } = await supabase
-                        .from('profiles')
-                        .select('status')
-                        .eq('id', data.user.id)
-                        .maybeSingle();
-
-                    if (profileCheck) {
-                        profileExists = true;
-                        // Force a small delay to allow Context to propagate if needed
-                        await new Promise(r => setTimeout(r, 100));
-
-                        // Check status from the DB directly to be safe
-                        if (profileCheck.status === 'approved') {
-                            navigate('/setup');
-                        } else {
-                            navigate('/');
-                        }
-                        return; // Exit function
-                    }
-
-                    attempts++;
-                    await new Promise(r => setTimeout(r, 500)); // Wait 500ms between attempts
-                }
-
-                // If loop finishes without success (fallback)
-                if (!profileExists) {
-                    // One last try
-                    await refreshProfile(data.user.id);
+                // 5. Navigate
+                if (status === 'approved') {
+                    navigate('/setup');
+                } else {
                     navigate('/');
                 }
             }
         } catch (err: any) {
             console.error(err);
-            if (err.message?.includes('already registered')) {
-                setError('This email is already registered. Please sign in.');
-            } else {
-                setError(err.message || "Failed to sign up");
-            }
+            setError(err.message || "Failed to sign up");
             setLoading(false);
         }
     };

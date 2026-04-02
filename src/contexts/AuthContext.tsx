@@ -44,18 +44,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const ptStorage = localStorage.getItem('pt_storage');
             let weight: number | undefined;
             let height: number | undefined;
+            let fullName: string = 'Offline User';
+            
             if (ptStorage) {
                 try {
                     const parsed = JSON.parse(ptStorage);
                     weight = parsed.state?.user?.weight;
                     height = parsed.state?.user?.height;
+                    fullName = parsed.state?.user?.name || 'Offline User';
                 } catch (e) { }
             }
 
             setProfile({
                 id: userId,
                 email: 'offline@user.local',
-                full_name: 'Offline User',
+                full_name: fullName,
                 phone: '',
                 location: '',
                 role: 'admin',
@@ -126,6 +129,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
     const signUp = async (email: string, password: string) => {
+        if (BYPASS_AUTH) {
+            const mockUser = { id: 'user-' + Date.now(), email } as User;
+            setUser(mockUser);
+            setSession({ user: mockUser } as Session);
+            return { data: { user: mockUser, session: { user: mockUser } as Session }, error: null };
+        }
         return await supabase.auth.signUp({
             email,
             password,
@@ -133,6 +142,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     const signIn = async (email: string, password: string) => {
+        if (BYPASS_AUTH) {
+            const mockUser = { id: 'offline-user', email } as User;
+            setUser(mockUser);
+            setSession({ user: mockUser } as Session);
+            fetchProfile('offline-user');
+            return { error: null };
+        }
         return await supabase.auth.signInWithPassword({
             email,
             password,
@@ -140,6 +156,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     const signOut = async () => {
+        if (BYPASS_AUTH) {
+            setUser(null);
+            setSession(null);
+            setProfile(null);
+            return;
+        }
         await supabase.auth.signOut();
         setProfile(null);
     };
@@ -152,8 +174,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     const updateProfile = async (updates: Partial<Profile>) => {
+        const idToUpdate = user?.id || 'offline-user';
+        
         if (BYPASS_AUTH) {
-            setProfile(prev => prev ? { ...prev, ...updates } : null);
+            const newProfile = profile ? { ...profile, ...updates } : { 
+                id: idToUpdate, 
+                email: user?.email || 'offline@user.local', 
+                full_name: 'User', 
+                phone: '', 
+                location: '', 
+                role: 'user' as const, 
+                status: 'approved' as const,
+                ...updates 
+            };
+            setProfile(newProfile);
+            
+            // Persist the essential stats to the local trainer store if needed
+            const ptStorage = localStorage.getItem('pt_storage');
+            if (ptStorage) {
+                try {
+                    const parsed = JSON.parse(ptStorage);
+                    if (updates.weight || updates.height) {
+                        if (!parsed.state.user) parsed.state.user = {};
+                        if (updates.weight) parsed.state.user.weight = updates.weight;
+                        if (updates.height) parsed.state.user.height = updates.height;
+                        localStorage.setItem('pt_storage', JSON.stringify(parsed));
+                    }
+                } catch (e) {}
+            }
             return;
         }
 
