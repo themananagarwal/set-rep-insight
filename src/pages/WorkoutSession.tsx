@@ -31,6 +31,7 @@ export default function WorkoutSession() {
     // sessionStartTime can be used for session-wide filters if needed later
 
     // -- STRUCTURAL STATE --
+    // We must find the correct index in activeDay that matches our exerciseIdParam
     const initialIndex = exerciseIdParam && activeDay
         ? activeDay.exercises.findIndex(e => e.exerciseId === exerciseIdParam)
         : 0;
@@ -531,7 +532,7 @@ export default function WorkoutSession() {
                             <div className="space-y-1">
                                 <span className={clsx(
                                     "text-[10px] font-bold uppercase tracking-widest block",
-                                    history.filter(h => h.exerciseId === activeExerciseId && h.completedAt > Date.now() - 1000 * 60 * 60 * 12).length >= (plannedExercise?.targetSets || 3)
+                                    sessionSets.filter(h => h.exerciseId === activeExerciseId).length >= (plannedExercise?.targetSets || 3)
                                         ? "text-emerald-500"
                                         : "text-text-muted"
                                 )}>
@@ -540,9 +541,9 @@ export default function WorkoutSession() {
                                 <div className="flex items-baseline gap-1">
                                     <span className={clsx(
                                         "text-2xl font-black tabular-nums leading-none",
-                                        history.filter(h => h.exerciseId === activeExerciseId && h.completedAt > Date.now() - 1000 * 60 * 60 * 12).length >= (plannedExercise?.targetSets || 3) ? "text-emerald-500" : "text-white"
+                                        sessionSets.filter(h => h.exerciseId === activeExerciseId).length >= (plannedExercise?.targetSets || 3) ? "text-emerald-500" : "text-white"
                                     )}>
-                                        {history.filter(h => h.exerciseId === activeExerciseId && h.completedAt > Date.now() - 1000 * 60 * 60 * 12).length}
+                                        {sessionSets.filter(h => h.exerciseId === activeExerciseId).length}
                                     </span>
                                     <span className="text-sm font-medium text-text-muted">
                                         / {plannedExercise?.targetSets || 3}
@@ -553,7 +554,7 @@ export default function WorkoutSession() {
                             {/* Visual Progress Dots */}
                             <div className="flex gap-1.5">
                                 {Array.from({ length: plannedExercise?.targetSets || 3 }).map((_, i) => {
-                                    const currentCount = history.filter(h => h.exerciseId === activeExerciseId && h.completedAt > Date.now() - 1000 * 60 * 60 * 12).length;
+                                    const currentCount = sessionSets.filter(h => h.exerciseId === activeExerciseId).length;
                                     const isDone = i < currentCount;
                                     return (
                                         <div
