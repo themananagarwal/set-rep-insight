@@ -549,10 +549,11 @@ export default function WorkoutSession() {
                                 </div>
                             </div>
 
-                            {/* Visual Progress Dots - Only show if not On The Go */}
-                            {!isOnTheGo && (
-                                <div className="flex gap-1.5">
-                                    {Array.from({ length: plannedExercise?.targetSets || 3 }).map((_, i) => {
+                            {/* Visual Progress Dots - Dynamic for On The Go, Fixed for Structured */}
+                            <div className="flex gap-1.5">
+                                {isOnTheGo ? (
+                                    // OTG: Dynamic bars up to 7
+                                    Array.from({ length: Math.min(Math.max(sessionSets.filter(h => h.exerciseId === activeExerciseId).length, 1), 7) }).map((_, i) => {
                                         const currentCount = sessionSets.filter(h => h.exerciseId === activeExerciseId).length;
                                         const isDone = i < currentCount;
                                         return (
@@ -564,9 +565,24 @@ export default function WorkoutSession() {
                                                 )}
                                             />
                                         );
-                                    })}
-                                </div>
-                            )}
+                                    })
+                                ) : (
+                                    // Structured: Fixed bars based on target
+                                    Array.from({ length: plannedExercise?.targetSets || 3 }).map((_, i) => {
+                                        const currentCount = sessionSets.filter(h => h.exerciseId === activeExerciseId).length;
+                                        const isDone = i < currentCount;
+                                        return (
+                                            <div
+                                                key={i}
+                                                className={clsx(
+                                                    "w-3 h-8 rounded-sm transition-all duration-300",
+                                                    isDone ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" : "bg-white/10"
+                                                )}
+                                            />
+                                        );
+                                    })
+                                )}
+                            </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
