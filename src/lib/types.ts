@@ -19,7 +19,8 @@ export type Exercise = {
     id: string;
     name: string;
     muscle: string;
-    type: "compound" | "isolation";
+    trackingType: "reps" | "time";
+    notes?: string;   // Persistent notes for the exercise
 };
 
 export type WorkoutSet = {
@@ -29,6 +30,7 @@ export type WorkoutSet = {
     reps: number;
     duration?: number; // Duration in seconds (for cardio/timed exercises)
     rpe?: number; // Rate of Perceived Exertion (1-10)
+    notes?: string; // Notes for this specific set
     completedAt: number;
 };
 

@@ -10,6 +10,7 @@ interface TrainerState {
     exercises: Exercise[];
     routines: Routine[];
     activeRoutineId: string | null;
+    onTheGoSession: { startTime: number; exercises: { exerciseId: string; targetSets: number }[] } | null;
 
     // Actions
     setUser: (user: UserProfile) => void;
@@ -24,10 +25,18 @@ interface TrainerState {
     setRoutine: (routine: Routine) => void; // Keeps backward compat for now
 
     addSet: (set: WorkoutSet) => void;
-    addExercise: (name: string, muscle: string) => void;
+    addExercise: (name: string, muscle: string, trackingType: "reps" | "time") => void;
     completeActiveRoutineDay: () => void;
     getPrediction: (exerciseId: string) => Prediction;
     syncExercises: () => void;
+    updateExerciseDef: (id: string, name: string, muscle: string, trackingType: "reps" | "time") => void;
+    deleteExerciseDef: (id: string) => void;
+    setExerciseNote: (id: string, notes: string) => void;
+    
+    startOnTheGo: () => void;
+    endOnTheGo: () => void;
+    addExerciseToOnTheGo: (exerciseId: string) => void;
+    
     applySchedulePatch: (patch: import("./program-adjustment").PlanPatch) => void;
 }
 
@@ -40,10 +49,11 @@ export const useTrainerStore = create<TrainerState>()(
                 id: def.id,
                 name: def.name,
                 muscle: def.primaryAxis,
-                type: (def.tags.includes("compound") ? "compound" : "isolation") as "compound" | "isolation"
+                trackingType: (def.primaryAxis === "Cardio" || def.id === "plank" ? "time" : "reps") as "reps" | "time"
             })),
             routines: [],
             activeRoutineId: null,
+            onTheGoSession: null,
 
             setUser: (user) => set({ user }),
 
@@ -78,12 +88,12 @@ export const useTrainerStore = create<TrainerState>()(
                 history: [...state.history, newSet]
             })),
 
-            addExercise: (name, muscle) => set((state) => {
+            addExercise: (name, muscle, trackingType) => set((state) => {
                 const newEx: Exercise = {
                     id: name.toLowerCase().replace(/\s/g, '_'),
                     name,
                     muscle,
-                    type: "isolation"
+                    trackingType
                 };
                 return { exercises: [...state.exercises, newEx] };
             }),
@@ -123,8 +133,38 @@ export const useTrainerStore = create<TrainerState>()(
                         id: def.id,
                         name: def.name,
                         muscle: def.primaryAxis,
-                        type: (def.tags.includes("compound") ? "compound" : "isolation") as "compound" | "isolation"
+                        trackingType: (def.primaryAxis === "Cardio" || def.id === "plank" ? "time" : "reps") as "reps" | "time"
                     }))]
+                };
+            }),
+
+            updateExerciseDef: (id, name, muscle, trackingType) => set((state) => ({
+                exercises: state.exercises.map(e => e.id === id ? { ...e, name, muscle, trackingType } : e)
+            })),
+
+            deleteExerciseDef: (id) => set((state) => {
+                // Prevent deleting system exercises (those in ALL_EXERCISES)
+                const isSystem = ALL_EXERCISES.some(sys => sys.id === id);
+                if (isSystem) return {};
+                
+                return {
+                    exercises: state.exercises.filter(e => e.id !== id)
+                };
+            }),
+
+            setExerciseNote: (id, notes) => set((state) => ({
+                exercises: state.exercises.map(e => e.id === id ? { ...e, notes } : e)
+            })),
+
+            startOnTheGo: () => set({ onTheGoSession: { startTime: Date.now(), exercises: [] } }),
+            endOnTheGo: () => set({ onTheGoSession: null }),
+            addExerciseToOnTheGo: (exerciseId) => set((state) => {
+                if (!state.onTheGoSession) return {};
+                return {
+                    onTheGoSession: {
+                        ...state.onTheGoSession,
+                        exercises: [...state.onTheGoSession.exercises, { exerciseId, targetSets: 1 }]
+                    }
                 };
             }),
 

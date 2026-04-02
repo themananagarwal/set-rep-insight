@@ -1,7 +1,7 @@
 import { startOfMonth, endOfMonth, eachDayOfInterval, format, isSameDay } from "date-fns";
 import { useTrainerStore } from "../lib/store";
 import { ChevronLeft, ChevronRight, BarChart2, Calendar as CalendarIcon } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import clsx from "clsx";
 import { TrendsView } from "../components/insights/TrendsView";
 
@@ -26,6 +26,19 @@ export default function HistoryPage() {
     const selectedSets = selectedDate
         ? history.filter(h => isSameDay(new Date(h.completedAt), selectedDate))
         : [];
+
+    const groupedByExercise = useMemo(() => {
+        const groups: Record<string, { exerciseId: string; sets: typeof selectedSets; timestamp: number }> = {};
+        selectedSets.forEach(set => {
+            if (!groups[set.exerciseId]) {
+                groups[set.exerciseId] = { exerciseId: set.exerciseId, sets: [], timestamp: set.completedAt };
+            }
+            groups[set.exerciseId].sets.push(set);
+        });
+        return Object.values(groups).sort((a, b) => b.timestamp - a.timestamp);
+    }, [selectedSets]);
+
+    const [expandedExId, setExpandedExId] = useState<string | null>(null);
 
     return (
         <div className="pt-6 pb-24 space-y-6">
@@ -130,26 +143,65 @@ export default function HistoryPage() {
                                 </div>
                             ) : (
                                 <div className="space-y-3">
-                                    {selectedSets.sort((a, b) => b.completedAt - a.completedAt).map(set => (
-                                        <div key={set.id} className="bg-surface border border-secondary p-4 rounded-xl flex justify-between items-center">
-                                            <div className="flex flex-col">
-                                                <span className="font-bold">
-                                                    {exercises.find(e => e.id === set.exerciseId)?.name || set.exerciseId}
-                                                </span>
-                                                <span className="text-xs text-text-muted">
-                                                    {format(new Date(set.completedAt), "h:mm a")}
-                                                </span>
+                                    {groupedByExercise.map(group => {
+                                        const exData = exercises.find(e => e.id === group.exerciseId);
+                                        const isExpanded = expandedExId === group.exerciseId;
+                                        
+                                        return (
+                                            <div key={group.exerciseId} className="space-y-2">
+                                                <button 
+                                                    onClick={() => setExpandedExId(isExpanded ? null : group.exerciseId)}
+                                                    className="w-full bg-surface border border-secondary p-4 rounded-xl flex justify-between items-center active:scale-[0.99] transition-all"
+                                                >
+                                                    <div className="flex flex-col text-left">
+                                                        <span className="font-bold text-white">
+                                                            {exData?.name || group.exerciseId}
+                                                        </span>
+                                                        <span className="text-xs text-text-muted">
+                                                            {group.sets.length} sets • Last at {format(new Date(group.timestamp), "h:mm a")}
+                                                        </span>
+                                                    </div>
+                                                    <div className="text-right flex items-center gap-3">
+                                                        <div className="text-sm font-bold text-primary">
+                                                            {group.sets[0].weight ? `${group.sets[0].weight}kg` : "Timed"}
+                                                        </div>
+                                                        <ChevronRight size={16} className={clsx("text-text-muted transition-transform", isExpanded && "rotate-90")} />
+                                                    </div>
+                                                </button>
+
+                                                {isExpanded && (
+                                                    <div className="bg-secondary/20 rounded-xl p-4 mx-2 space-y-4 animate-in slide-in-from-top-2 fade-in">
+                                                        {/* Persistent Notes for this Exercise */}
+                                                        {exData?.notes && (
+                                                            <div className="bg-primary/5 border border-primary/20 p-3 rounded-lg">
+                                                                <p className="text-[10px] font-bold text-primary uppercase tracking-widest mb-1">General Notes</p>
+                                                                <p className="text-xs text-text-muted leading-relaxed">{exData.notes}</p>
+                                                            </div>
+                                                        )}
+
+                                                        <div className="space-y-2">
+                                                            <div className="grid grid-cols-[30px_1fr_1fr_1fr] gap-2 text-[10px] font-bold text-text-muted uppercase tracking-widest text-center">
+                                                                <span>#</span>
+                                                                <span>Metric</span>
+                                                                <span>RPE</span>
+                                                                <span>Time</span>
+                                                            </div>
+                                                            {group.sets.sort((a, b) => a.completedAt - b.completedAt).map((set, i) => (
+                                                                <div key={set.id} className="grid grid-cols-[30px_1fr_1fr_1fr] gap-2 items-center text-center py-1 border-b border-white/5 last:border-0">
+                                                                    <span className="text-xs text-text-muted font-mono">{i+1}</span>
+                                                                    <span className="text-xs font-bold text-white">
+                                                                        {set.duration ? `${Math.floor(set.duration/60)}m ${set.duration%60}s` : `${set.weight}kg x ${set.reps}`}
+                                                                    </span>
+                                                                    <span className="text-xs text-text-muted">RPE {set.rpe}</span>
+                                                                    <span className="text-[10px] text-text-muted font-mono">{format(new Date(set.completedAt), "h:mm a")}</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
-                                            <div className="text-right">
-                                                <div className="text-xl font-bold font-mono">
-                                                    {set.weight}<span className="text-sm font-sans text-text-muted">kg</span>
-                                                </div>
-                                                <div className="text-xs text-text-muted">
-                                                    {set.reps} reps @ RPE {set.rpe}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>

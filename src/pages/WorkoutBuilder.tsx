@@ -304,7 +304,7 @@ export default function WorkoutBuilder() {
                     <div className="space-y-4">
                         {currentDay.exercises.map((exPattern, exIndex) => {
                             const exerciseData = exercises.find(e => e.id === exPattern.exerciseId);
-                            const isCardio = exerciseData?.muscle === "Cardio" || exPattern.exerciseId === "plank";
+                            const isTimed = exerciseData?.trackingType === "time";
 
                             return (
                                 <div key={exIndex} className="bg-surface border border-secondary p-4 rounded-xl relative group">
@@ -330,7 +330,7 @@ export default function WorkoutBuilder() {
                                     </div>
 
                                     {/* Sets Table or Cardio Message */}
-                                    {isCardio ? (
+                                    {isTimed ? (
                                         <div className="bg-secondary/30 rounded-lg p-4 text-center border border-white/5">
                                             <div className="flex items-center justify-center gap-2 text-primary font-bold text-sm mb-1">
                                                 <Clock size={16} />

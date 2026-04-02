@@ -14,9 +14,12 @@ export default function WorkoutSession() {
     const searchParams = new URLSearchParams(window.location.search);
     const exerciseIdParam = searchParams.get("exerciseId");
 
-    const { history, exercises, routines, activeRoutineId, addSet } = useTrainerStore();
+    const { history, exercises, routines, activeRoutineId, addSet, setExerciseNote, onTheGoSession } = useTrainerStore();
     const routine = routines.find(r => r.id === activeRoutineId);
     const activeDay = routine?.days[routine?.currentDayIndex || 0];
+
+    const isOnTheGo = !!onTheGoSession;
+    // sessionStartTime can be used for session-wide filters if needed later
 
     // -- STRUCTURAL STATE --
     const initialIndex = exerciseIdParam && activeDay
@@ -29,6 +32,7 @@ export default function WorkoutSession() {
     // -- INPUT STATE --
     // Added duration for cardio
     const [inputs, setInputs] = useState({ weight: 0, reps: 0, rpe: 8, duration: 60 });
+    const [localNote, setLocalNote] = useState("");
 
     // -- TIMER STATE --
     const [isTimerOpen, setIsTimerOpen] = useState(false);
@@ -52,20 +56,21 @@ export default function WorkoutSession() {
 
     // Determine active exercise data
     const plannedExercise = activeDay?.exercises[exerciseIndex];
-    const activeExerciseId = plannedExercise?.exerciseId || (exercises[0] ? exercises[0].id : "unknown");
+    const activeExerciseId = plannedExercise?.exerciseId || exerciseIdParam || (exercises[0] ? exercises[0].id : "unknown");
     const activeExerciseData = exercises.find(e => e.id === activeExerciseId);
-    const isCardio = activeExerciseData?.muscle === "Cardio" || activeExerciseData?.id === "plank";
+    const isTimed = activeExerciseData?.trackingType === "time";
 
     // -- INITIALISE INPUTS & CARDIO PLAN ON EXERCISE CHANGE --
     useEffect(() => {
+        setLocalNote(activeExerciseData?.notes || "");
         // Seed weight from last logged set for this exercise (or 0 for cold start)
         const lastSet = [...history]
             .filter(s => s.exerciseId === activeExerciseId)
             .sort((a, b) => b.completedAt - a.completedAt)[0];
 
         setInputs({
-            weight: lastSet?.weight ?? 0,
-            reps: lastSet?.reps ?? 0,
+            weight: lastSet?.weight ?? (Number(plannedExercise?.sets?.[0]?.weight) || 0),
+            reps: lastSet?.reps ?? (Number(plannedExercise?.sets?.[0]?.reps) || 10),
             rpe: 8,
             duration: 60
         });
@@ -78,7 +83,7 @@ export default function WorkoutSession() {
             rest: 0
         }));
         setCardioPlan(newPlan);
-    }, [activeExerciseId]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [activeExerciseId, isTimed]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // -- AUDIO HELPERS --
     // -- AUDIO HELPERS --
@@ -240,7 +245,7 @@ export default function WorkoutSession() {
             exerciseId: activeExerciseId,
             weight: Number(inputs.weight),
             reps: Number(inputs.reps),
-            duration: isCardio ? (specificDuration || Number(inputs.duration)) : undefined,
+            duration: isTimed ? (specificDuration || Number(inputs.duration)) : undefined,
             rpe: Number(inputs.rpe),
             completedAt: Date.now()
         };
@@ -248,7 +253,7 @@ export default function WorkoutSession() {
         addSet(newSet);
         setSessionSets(prev => [...prev, newSet]);
 
-        if (!isCardio && !silent) {
+        if (!isTimed && !silent) {
             // Track set count per exercise
             const setNum = (exerciseSetCounts[activeExerciseId] ?? 0) + 1;
             setExerciseSetCounts(prev => ({ ...prev, [activeExerciseId]: setNum }));
@@ -257,13 +262,17 @@ export default function WorkoutSession() {
             fatigueTracker.addSetToFatigue(activeExerciseId, Number(inputs.rpe) || 8, setNum);
 
             // Get planned rep range from routine if available
-            const plannedExercise = activeDay?.exercises.find(e => e.exerciseId === activeExerciseId);
+            const plannedEx = isOnTheGo 
+                ? onTheGoSession!.exercises.find(e => e.exerciseId === activeExerciseId)
+                : activeDay?.exercises.find(e => e.exerciseId === activeExerciseId);
+            
             let planRepRange: [number, number] | undefined;
-            if (plannedExercise?.sets?.[0]?.reps) {
-                const repStr = plannedExercise.sets[0].reps;
+            if (!isOnTheGo && plannedEx && 'sets' in plannedEx && (plannedEx as any).sets?.[0]?.reps) {
+                const repStr = (plannedEx as any).sets[0].reps;
                 const parts = repStr.split('-').map(Number);
                 if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
                     planRepRange = [parts[0], parts[1]];
+                } else if (parts.length === 1 && !isNaN(parts[0])) {
                 } else if (parts.length === 1 && !isNaN(parts[0])) {
                     planRepRange = [parts[0], parts[0]];
                 }
@@ -314,7 +323,17 @@ export default function WorkoutSession() {
 
 
     const handleFinishWorkout = () => {
+        // Auto-save note on finish just in case
+        if (activeExerciseId && localNote !== activeExerciseData?.notes) {
+            setExerciseNote(activeExerciseId, localNote);
+        }
         navigate("/workout/active");
+    };
+
+    const saveNote = () => {
+        if (activeExerciseId) {
+            setExerciseNote(activeExerciseId, localNote);
+        }
     };
 
 
@@ -405,7 +424,7 @@ export default function WorkoutSession() {
             {/* Input Form */}
             <div className="space-y-8">
 
-                {isCardio ? (
+                {isTimed ? (
                     // --- CARDIO UI (Keep existing logic but style update) ---
                     <div className="space-y-6">
                         {isCardioTimerRunning ? (
@@ -580,6 +599,30 @@ export default function WorkoutSession() {
                         </button>
                     </>
                 )}
+            </div>
+
+            {/* Exercise Notes Section */}
+            <div className="bg-surface/30 border border-white/5 rounded-2xl p-5 space-y-3">
+                <div className="flex justify-between items-center px-1">
+                    <label className="text-[10px] font-bold text-text-muted uppercase tracking-widest">
+                        Exercise Notes
+                    </label>
+                    {localNote !== activeExerciseData?.notes && (
+                        <button 
+                            onClick={saveNote}
+                            className="text-[10px] font-bold text-primary uppercase tracking-widest animate-pulse"
+                        >
+                            Save Note
+                        </button>
+                    )}
+                </div>
+                <textarea
+                    value={localNote}
+                    onChange={(e) => setLocalNote(e.target.value)}
+                    onBlur={saveNote}
+                    placeholder="Add tips, cues, or reminders for this exercise..."
+                    className="w-full bg-black/20 border border-white/5 rounded-xl p-4 text-sm text-white placeholder:text-text-muted/30 focus:outline-none focus:ring-1 ring-primary/30 min-h-[100px] resize-none"
+                />
             </div>
 
             {/* Session History List */}
