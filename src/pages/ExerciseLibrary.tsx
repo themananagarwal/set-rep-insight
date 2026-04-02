@@ -1,9 +1,8 @@
 import { useState, useMemo } from "react";
 import { useTrainerStore } from "../lib/store";
 import { EXERCISE_LIBRARY } from "../lib/exercises";
-import { Dumbbell, Search, Edit2, Trash2, Plus, Clock, Target, ArrowLeft, MoreVertical } from "lucide-react";
+import { Dumbbell, Search, Edit2, Trash2, Plus, Clock, Target, MoreVertical } from "lucide-react";
 import clsx from "clsx";
-import { generateID } from "../lib/utils";
 
 export default function ExerciseLibrary() {
     const { exercises, addExercise, updateExerciseDef, deleteExerciseDef } = useTrainerStore();
