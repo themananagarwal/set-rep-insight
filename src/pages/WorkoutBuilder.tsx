@@ -2,8 +2,9 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTrainerStore } from "../lib/store";
 import type { Routine, WorkoutExercisePattern, TargetSet } from "../lib/types";
-import { Save, Plus, Trash2, ChevronDown, Copy, Dumbbell, Clock } from "lucide-react";
+import { Save, Plus, Trash2, ChevronDown, Copy, Dumbbell, Clock, Search } from "lucide-react";
 import { generateID } from "../lib/utils";
+import ExercisePicker from "../components/ExercisePicker";
 import clsx from "clsx";
 
 const DEFAULT_SET: TargetSet = {
@@ -33,6 +34,10 @@ export default function WorkoutBuilder() {
 
     const [activeDayId, setActiveDayId] = useState<string | null>(null);
     const [isCopyModalOpen, setIsCopyModalOpen] = useState(false);
+    
+    // UI Local State
+    const [pickerOpen, setPickerOpen] = useState(false);
+    const [pickerTarget, setPickerTarget] = useState<{ dayId: string; exIndex?: number } | null>(null);
 
     // Initialize (Load existing or start fresh)
     useEffect(() => {
@@ -114,23 +119,39 @@ export default function WorkoutBuilder() {
     };
 
     // --- EXERCISE MANAGEMENT ---
-    const addExercise = (dayId: string) => {
-        const defaultEx = exercises[0];
-        const newPattern: WorkoutExercisePattern = {
-            exerciseId: defaultEx.id,
-            targetSets: 3,
-            targetReps: 10,
-            sets: [
-                { ...DEFAULT_SET, id: generateID() },
-                { ...DEFAULT_SET, id: generateID() },
-                { ...DEFAULT_SET, id: generateID() }
-            ]
-        };
+    const openExercisePicker = (dayId: string, exIndex?: number) => {
+        setPickerTarget({ dayId, exIndex });
+        setPickerOpen(true);
+    };
 
-        setDraft(prev => ({
-            ...prev,
-            days: prev.days.map(d => d.id === dayId ? { ...d, exercises: [...d.exercises, newPattern] } : d)
-        }));
+    const handlePickerSelect = (exerciseId: string) => {
+        if (!pickerTarget) return;
+        const { dayId, exIndex } = pickerTarget;
+
+        if (exIndex === undefined) {
+            // Adding fresh exercise
+            const newPattern: WorkoutExercisePattern = {
+                exerciseId: exerciseId,
+                targetSets: 3,
+                targetReps: 10,
+                sets: [
+                    { ...DEFAULT_SET, id: generateID() },
+                    { ...DEFAULT_SET, id: generateID() },
+                    { ...DEFAULT_SET, id: generateID() }
+                ]
+            };
+
+            setDraft(prev => ({
+                ...prev,
+                days: prev.days.map(d => d.id === dayId ? { ...d, exercises: [...d.exercises, newPattern] } : d)
+            }));
+        } else {
+            // Updating existing
+            updateExercise(dayId, exIndex, 'exerciseId', exerciseId);
+        }
+
+        setPickerOpen(false);
+        setPickerTarget(null);
     };
 
     const updateExercise = (dayId: string, exerciseIndex: number, field: keyof WorkoutExercisePattern, value: any) => {
@@ -290,23 +311,15 @@ export default function WorkoutBuilder() {
                                     {/* Exercise Header */}
                                     <div className="flex justify-between items-start mb-4">
                                         <div className="flex items-center gap-2 w-full pr-8">
-                                            {/* Exercise Selector / Dropdown simulated */}
-                                            <div className="relative w-full">
-                                                <select
-                                                    value={exPattern.exerciseId}
-                                                    onChange={(e) => updateExercise(currentDay.id, exIndex, 'exerciseId', e.target.value)}
-                                                    className="bg-transparent font-bold text-lg appearance-none cursor-pointer hover:underline outline-none w-full pr-6"
-                                                >
-                                                    {Array.from(new Set(exercises.map(e => e.muscle))).sort().map(muscle => (
-                                                        <optgroup key={muscle} label={muscle}>
-                                                            {exercises.filter(e => e.muscle === muscle).map(e => (
-                                                                <option key={e.id} value={e.id} className="text-black">{e.name}</option>
-                                                            ))}
-                                                        </optgroup>
-                                                    ))}
-                                                </select>
-                                                <ChevronDown size={14} className="text-text-muted absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none" />
-                                            </div>
+                                            <button 
+                                                onClick={() => openExercisePicker(currentDay.id, exIndex)}
+                                                className="flex items-center gap-2 group/btn py-1"
+                                            >
+                                                <h3 className="font-bold text-lg text-white group-hover/btn:text-primary transition-colors">
+                                                    {exerciseData?.name || "Select Exercise"}
+                                                </h3>
+                                                <Search size={16} className="text-text-muted group-hover/btn:text-primary transition-colors" />
+                                            </button>
                                         </div>
                                         <button
                                             onClick={() => deleteExercise(currentDay.id, exIndex)}
@@ -379,7 +392,7 @@ export default function WorkoutBuilder() {
                         })}
 
                         <button
-                            onClick={() => addExercise(currentDay.id)}
+                            onClick={() => openExercisePicker(currentDay.id)}
                             className="w-full py-4 border-2 border-dashed border-secondary rounded-xl text-text-muted hover:border-primary hover:text-primary transition-colors font-semibold flex items-center justify-center gap-2"
                         >
                             <Dumbbell size={20} /> Add Exercise
@@ -390,6 +403,13 @@ export default function WorkoutBuilder() {
                 <div className="flex flex-col items-center justify-center py-20 text-text-muted">
                     <p>Select or Add a Day to start editing.</p>
                 </div>
+            )}
+
+            {pickerOpen && (
+                <ExercisePicker 
+                    onSelect={handlePickerSelect} 
+                    onBack={() => setPickerOpen(false)} 
+                />
             )}
         </div>
     );
