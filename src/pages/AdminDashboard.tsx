@@ -4,6 +4,7 @@ import type { UserProfile, Routine } from '../lib/types';
 import { useMockBackendStore } from '../lib/mockBackend';
 import { useTrainerStore } from '../lib/store';
 import { Users, BookOpen, Settings, LogOut, Plus, User as UserIcon, ArrowLeft, Activity, Calendar, X, Dices, Dumbbell, Pencil, Search, Trash2, CheckCircle, FolderOpen, Copy } from 'lucide-react';
+import { ProgramBuilder } from '../components/ProgramBuilder';
 
 export default function AdminDashboard() {
     const { user, logout, switchViewMode } = useAuth();
@@ -54,6 +55,7 @@ export default function AdminDashboard() {
     const [isAddingProgram, setIsAddingProgram] = useState(false);
     const [progForm, setProgForm] = useState({ name: '', description: '', scope: 'template' as 'template' | 'client-specific', assignedTo: '' });
     const [selectedProgramToAssign, setSelectedProgramToAssign] = useState<string | null>(null);
+    const [editingRoutine, setEditingRoutine] = useState<import('../lib/types').TrainerRoutine | null>(null);
 
     // Library State
     const [libSearch, setLibSearch] = useState('');
@@ -589,6 +591,10 @@ export default function AdminDashboard() {
                 
                 {activeTab === 'programs' && (
                     <div className="max-w-5xl mx-auto space-y-6">
+                        {editingRoutine ? (
+                            <ProgramBuilder routine={editingRoutine} onClose={() => setEditingRoutine(null)} />
+                        ) : (
+                            <>
                         <div className="flex items-center justify-between">
                             <div>
                                 <h2 className="text-3xl font-bold tracking-tight mb-1">Programs</h2>
@@ -712,9 +718,9 @@ export default function AdminDashboard() {
                                             <div className="flex items-center justify-between pt-4 border-t border-white/5">
                                                 <div className="flex gap-2">
                                                     <button 
-                                                        disabled
-                                                        title="Builder coming soon..."
-                                                        className="p-2 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors cursor-not-allowed"
+                                                        onClick={() => setEditingRoutine(routine)}
+                                                        title="Edit Program Builder"
+                                                        className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
                                                     >
                                                         <Pencil size={18} />
                                                     </button>
@@ -761,6 +767,8 @@ export default function AdminDashboard() {
                                 </div>
                             )}
                         </div>
+                            </>
+                        )}
                     </div>
                 )}
 
