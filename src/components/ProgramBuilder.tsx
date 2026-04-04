@@ -3,7 +3,7 @@ import { ArrowLeft, Save, Trash2, Dumbbell, X, Plus, GripVertical } from 'lucide
 import type { TrainerRoutine, WorkoutDay } from '../lib/types';
 import { useMockBackendStore } from '../lib/mockBackend';
 import { useTrainerStore } from '../lib/store';
-import ExercisePicker from './ExercisePicker';
+import AdminExercisePicker from './AdminExercisePicker';
 
 type Props = {
     routine: TrainerRoutine;
@@ -229,7 +229,7 @@ export function ProgramBuilder({ routine: initialRoutine, onClose }: Props) {
             {/* Exercise Picker Modal */}
             {showPickerForDay && (
                 <div className="fixed inset-0 z-[100]">
-                    <ExercisePicker 
+                    <AdminExercisePicker 
                         onSelect={(ex: any) => {
                             setRoutine(r => {
                                 const isTime = ex.trackingType === 'time';
