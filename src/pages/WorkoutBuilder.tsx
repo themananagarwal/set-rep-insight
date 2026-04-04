@@ -2,8 +2,9 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTrainerStore } from "../lib/store";
 import type { Routine, WorkoutExercisePattern, TargetSet } from "../lib/types";
-import { Save, Plus, Trash2, ChevronDown, Copy, Dumbbell, Clock } from "lucide-react";
+import { Save, Plus, Trash2, Copy, Dumbbell, Clock, Search } from "lucide-react";
 import { generateID } from "../lib/utils";
+import ExercisePicker from "../components/ExercisePicker";
 import clsx from "clsx";
 
 const DEFAULT_SET: TargetSet = {
@@ -33,6 +34,10 @@ export default function WorkoutBuilder() {
 
     const [activeDayId, setActiveDayId] = useState<string | null>(null);
     const [isCopyModalOpen, setIsCopyModalOpen] = useState(false);
+    
+    // UI Local State
+    const [pickerOpen, setPickerOpen] = useState(false);
+    const [pickerTarget, setPickerTarget] = useState<{ dayId: string; exIndex?: number } | null>(null);
 
     // Initialize (Load existing or start fresh)
     useEffect(() => {
@@ -43,9 +48,9 @@ export default function WorkoutBuilder() {
                 setActiveDayId(existing.days[0]?.id || null);
             }
         } else if (id === "new") {
-            // Default setup for new plan (Mon-Sun) (Mon-Sun)
-            const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-            const newDays = daysOfWeek.map(dayName => ({
+            // Default setup: Day 1 to Day 3 for a fresh cycle
+            const defaultDays = ["Day 01", "Day 02", "Day 03"];
+            const newDays = defaultDays.map(dayName => ({
                 id: generateID(),
                 name: dayName,
                 exercises: []
@@ -74,27 +79,34 @@ export default function WorkoutBuilder() {
     };
 
     // --- DAY MANAGEMENT ---
-    // const addDay = () => {
-    //     const newDay: WorkoutDay = {
-    //         id: generateID(),
-    //         name: `Day ${draft.days.length + 1}`,
-    //         exercises: []
-    //     };
-    //     setDraft(prev => ({ ...prev, days: [...prev.days, newDay] }));
-    //     setActiveDayId(newDay.id);
-    // };
+    const addDay = () => {
+        const nextNum = draft.days.length + 1;
+        const newDay = {
+            id: generateID(),
+            name: `Day ${nextNum < 10 ? '0' + nextNum : nextNum}`,
+            exercises: []
+        };
+        setDraft(prev => ({ ...prev, days: [...prev.days, newDay] }));
+        setActiveDayId(newDay.id);
+    };
 
-    // const updateDayName = (dayId: string, name: string) => {
-    //     setDraft(prev => ({
-    //         ...prev,
-    //         days: prev.days.map(d => d.id === dayId ? { ...d, name } : d)
-    //     }));
-    // };
+    const updateDayName = (dayId: string, name: string) => {
+        setDraft(prev => ({
+            ...prev,
+            days: prev.days.map(d => d.id === dayId ? { ...d, name } : d)
+        }));
+    };
 
-    // const deleteDay = (dayId: string) => {
-    //     // ... (Logic removed as we fixed days, but keeping function structure if needed or removing it)
-    //     // Since we removed the delete button, this is dead code, but let's effectively disable it or repurpose
-    // };
+    const deleteDay = (dayId: string) => {
+        if (draft.days.length <= 1) return alert("You need at least one day in your routine.");
+        setDraft(prev => {
+            const newDays = prev.days.filter(d => d.id !== dayId);
+            if (activeDayId === dayId) {
+                setActiveDayId(newDays[0]?.id || null);
+            }
+            return { ...prev, days: newDays };
+        });
+    };
 
     const handleCopyDay = (sourceDayId: string) => {
         const sourceDay = draft.days.find(d => d.id === sourceDayId);
@@ -114,23 +126,43 @@ export default function WorkoutBuilder() {
     };
 
     // --- EXERCISE MANAGEMENT ---
-    const addExercise = (dayId: string) => {
-        const defaultEx = exercises[0];
-        const newPattern: WorkoutExercisePattern = {
-            exerciseId: defaultEx.id,
-            targetSets: 3,
-            targetReps: 10,
-            sets: [
-                { ...DEFAULT_SET, id: generateID() },
-                { ...DEFAULT_SET, id: generateID() },
-                { ...DEFAULT_SET, id: generateID() }
-            ]
-        };
+    const openExercisePicker = (dayId: string, exIndex?: number) => {
+        setPickerTarget({ dayId, exIndex });
+        setPickerOpen(true);
+    };
 
-        setDraft(prev => ({
-            ...prev,
-            days: prev.days.map(d => d.id === dayId ? { ...d, exercises: [...d.exercises, newPattern] } : d)
-        }));
+    const handlePickerSelect = (exerciseId: string) => {
+        if (!pickerTarget) return;
+        const { dayId, exIndex } = pickerTarget;
+
+        if (exIndex === undefined) {
+            // Adding fresh exercise
+            const exerciseData = exercises.find(e => e.id === exerciseId);
+            const isTimed = exerciseData?.trackingType === "time";
+            const defaultValue = isTimed ? "60" : "10";
+
+            const newPattern: WorkoutExercisePattern = {
+                exerciseId: exerciseId,
+                targetSets: 3,
+                targetReps: parseInt(defaultValue),
+                sets: [
+                    { ...DEFAULT_SET, id: generateID(), reps: defaultValue },
+                    { ...DEFAULT_SET, id: generateID(), reps: defaultValue },
+                    { ...DEFAULT_SET, id: generateID(), reps: defaultValue }
+                ]
+            };
+
+            setDraft(prev => ({
+                ...prev,
+                days: prev.days.map(d => d.id === dayId ? { ...d, exercises: [...d.exercises, newPattern] } : d)
+            }));
+        } else {
+            // Updating existing
+            updateExercise(dayId, exIndex, 'exerciseId', exerciseId);
+        }
+
+        setPickerOpen(false);
+        setPickerTarget(null);
     };
 
     const updateExercise = (dayId: string, exerciseIndex: number, field: keyof WorkoutExercisePattern, value: any) => {
@@ -155,46 +187,46 @@ export default function WorkoutBuilder() {
         }));
     };
 
-    // --- SET MANAGEMENT ---
-    const updateSet = (dayId: string, exerciseIndex: number, setIndex: number, field: keyof TargetSet, value: any) => {
+    const updateTargetSets = (dayId: string, exerciseIndex: number, newSets: number) => {
+        if (newSets < 1) return;
         setDraft(prev => ({
             ...prev,
             days: prev.days.map(d => {
                 if (d.id !== dayId) return d;
                 const newExs = [...d.exercises];
-                const newSets = [...newExs[exerciseIndex].sets];
-                newSets[setIndex] = { ...newSets[setIndex], [field]: value };
-                newExs[exerciseIndex] = { ...newExs[exerciseIndex], sets: newSets };
-                return { ...d, exercises: newExs };
-            })
-        }));
-    };
+                const currentPattern = newExs[exerciseIndex];
+                
+                // Regenerate sets to match count
+                const updatedSets = Array.from({ length: newSets }).map((_, i) => {
+                    const existing = currentPattern.sets[i];
+                    return existing ? { ...existing } : { ...DEFAULT_SET, id: generateID() };
+                });
 
-    const addSet = (dayId: string, exerciseIndex: number) => {
-        setDraft(prev => ({
-            ...prev,
-            days: prev.days.map(d => {
-                if (d.id !== dayId) return d;
-                const newExs = [...d.exercises];
-                newExs[exerciseIndex] = {
-                    ...newExs[exerciseIndex],
-                    sets: [...newExs[exerciseIndex].sets, { ...DEFAULT_SET, id: generateID() }]
+                newExs[exerciseIndex] = { 
+                    ...currentPattern, 
+                    targetSets: newSets,
+                    sets: updatedSets
                 };
                 return { ...d, exercises: newExs };
             })
         }));
     };
 
-    const removeSet = (dayId: string, exerciseIndex: number, setIndex: number) => {
+    const updateTargetReps = (dayId: string, exerciseIndex: number, newReps: string) => {
         setDraft(prev => ({
             ...prev,
             days: prev.days.map(d => {
                 if (d.id !== dayId) return d;
                 const newExs = [...d.exercises];
-                newExs[exerciseIndex] = {
-                    ...newExs[exerciseIndex],
-                    // Don't modify targetSets/Reps here as they are deprecated, we rely on sets.length
-                    sets: newExs[exerciseIndex].sets.filter((_, i) => i !== setIndex)
+                const currentPattern = newExs[exerciseIndex];
+                
+                // Update target reps and ALSO update default reps in the 'sets' array
+                const updatedSets = currentPattern.sets.map(s => ({ ...s, reps: newReps }));
+
+                newExs[exerciseIndex] = { 
+                    ...currentPattern, 
+                    targetReps: parseInt(newReps) || 0,
+                    sets: updatedSets
                 };
                 return { ...d, exercises: newExs };
             })
@@ -249,7 +281,7 @@ export default function WorkoutBuilder() {
             )}
 
             {/* Day Selector (Horizontal Scroll) */}
-            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide items-center">
                 {draft.days.map(day => (
                     <button
                         key={day.id}
@@ -261,52 +293,66 @@ export default function WorkoutBuilder() {
                                 : "bg-secondary text-text-muted border-transparent hover:bg-white/10"
                         )}
                     >
-                        {day.name.slice(0, 3)}
+                        {day.name}
                     </button>
                 ))}
+                <button
+                    onClick={addDay}
+                    className="p-2 aspect-square bg-primary/10 text-primary border border-primary/20 rounded-full hover:bg-primary/20 transition-colors"
+                    title="Add Day"
+                >
+                    <Plus size={16} />
+                </button>
             </div>
 
             {/* Active Day Editor */}
             {currentDay ? (
                 <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
                     <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                        <h2 className="text-2xl font-bold">{currentDay.name}</h2>
-                        <button
-                            onClick={() => setIsCopyModalOpen(true)}
-                            className="bg-secondary p-2 rounded-lg text-xs font-bold text-primary flex items-center gap-2 hover:bg-white/10 transition-colors"
-                        >
-                            <Copy size={16} /> Copy from...
-                        </button>
+                        <div className="flex items-center gap-3">
+                            <input
+                                value={currentDay.name}
+                                onChange={(e) => updateDayName(currentDay.id, e.target.value)}
+                                className="bg-transparent text-2xl font-bold focus:outline-none placeholder:text-text-muted/50 border-b border-transparent focus:border-primary/50"
+                            />
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setIsCopyModalOpen(true)}
+                                className="bg-secondary p-2 rounded-lg text-xs font-bold text-primary flex items-center gap-2 hover:bg-white/10 transition-colors"
+                            >
+                                <Copy size={16} /> Copy
+                            </button>
+                            <button
+                                onClick={() => deleteDay(currentDay.id)}
+                                className="bg-red-500/10 p-2 rounded-lg text-red-500 hover:bg-red-500/20 transition-colors"
+                                title="Delete Day"
+                            >
+                                <Trash2 size={16} />
+                            </button>
+                        </div>
                     </div>
 
                     {/* Exercises List */}
                     <div className="space-y-4">
                         {currentDay.exercises.map((exPattern, exIndex) => {
                             const exerciseData = exercises.find(e => e.id === exPattern.exerciseId);
-                            const isCardio = exerciseData?.muscle === "Cardio" || exPattern.exerciseId === "plank";
+                            const isTimed = exerciseData?.trackingType === "time";
 
                             return (
                                 <div key={exIndex} className="bg-surface border border-secondary p-4 rounded-xl relative group">
                                     {/* Exercise Header */}
                                     <div className="flex justify-between items-start mb-4">
                                         <div className="flex items-center gap-2 w-full pr-8">
-                                            {/* Exercise Selector / Dropdown simulated */}
-                                            <div className="relative w-full">
-                                                <select
-                                                    value={exPattern.exerciseId}
-                                                    onChange={(e) => updateExercise(currentDay.id, exIndex, 'exerciseId', e.target.value)}
-                                                    className="bg-transparent font-bold text-lg appearance-none cursor-pointer hover:underline outline-none w-full pr-6"
-                                                >
-                                                    {Array.from(new Set(exercises.map(e => e.muscle))).sort().map(muscle => (
-                                                        <optgroup key={muscle} label={muscle}>
-                                                            {exercises.filter(e => e.muscle === muscle).map(e => (
-                                                                <option key={e.id} value={e.id} className="text-black">{e.name}</option>
-                                                            ))}
-                                                        </optgroup>
-                                                    ))}
-                                                </select>
-                                                <ChevronDown size={14} className="text-text-muted absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none" />
-                                            </div>
+                                            <button 
+                                                onClick={() => openExercisePicker(currentDay.id, exIndex)}
+                                                className="flex items-center gap-2 group/btn py-1"
+                                            >
+                                                <h3 className="font-bold text-lg text-white group-hover/btn:text-primary transition-colors">
+                                                    {exerciseData?.name || "Select Exercise"}
+                                                </h3>
+                                                <Search size={16} className="text-text-muted group-hover/btn:text-primary transition-colors" />
+                                            </button>
                                         </div>
                                         <button
                                             onClick={() => deleteExercise(currentDay.id, exIndex)}
@@ -316,8 +362,8 @@ export default function WorkoutBuilder() {
                                         </button>
                                     </div>
 
-                                    {/* Sets Table or Cardio Message */}
-                                    {isCardio ? (
+                                    {/* Simplified UI: Just Sets & Reps */}
+                                    {isTimed ? (
                                         <div className="bg-secondary/30 rounded-lg p-4 text-center border border-white/5">
                                             <div className="flex items-center justify-center gap-2 text-primary font-bold text-sm mb-1">
                                                 <Clock size={16} />
@@ -328,50 +374,33 @@ export default function WorkoutBuilder() {
                                             </p>
                                         </div>
                                     ) : (
-                                        <div className="space-y-2">
-                                            <div className="grid grid-cols-[30px_1fr_1fr_1fr_30px] gap-2 text-xs text-text-muted uppercase font-bold text-center mb-1">
-                                                <span>#</span>
-                                                <span>Reps</span>
-                                                <span>kg</span>
-                                                <span>RPE</span>
-                                                <span></span>
-                                            </div>
-                                            {(exPattern.sets || []).map((set, setIndex) => (
-                                                <div key={set.id || setIndex} className="grid grid-cols-[30px_1fr_1fr_1fr_30px] gap-2 items-center">
-                                                    <span className="text-center text-xs text-text-muted font-mono">{setIndex + 1}</span>
-                                                    <input
-                                                        value={set.reps}
-                                                        onChange={(e) => updateSet(currentDay.id, exIndex, setIndex, 'reps', e.target.value)}
-                                                        className="bg-secondary rounded p-1 text-center text-sm font-bold focus:ring-1 ring-primary outline-none w-full min-w-0"
-                                                        placeholder="10"
-                                                    />
-                                                    <input
-                                                        value={set.weight || ""}
-                                                        onChange={(e) => updateSet(currentDay.id, exIndex, setIndex, 'weight', e.target.value)}
-                                                        className="bg-secondary rounded p-1 text-center text-sm focus:ring-1 ring-primary outline-none w-full min-w-0"
-                                                        placeholder="-"
-                                                    />
-                                                    <input
-                                                        value={set.rpe || ""}
-                                                        onChange={(e) => updateSet(currentDay.id, exIndex, setIndex, 'rpe', e.target.value)}
-                                                        className="bg-secondary rounded p-1 text-center text-sm focus:ring-1 ring-primary outline-none w-full min-w-0"
-                                                        placeholder="8"
-                                                    />
-                                                    <button
-                                                        onClick={() => removeSet(currentDay.id, exIndex, setIndex)}
-                                                        className="text-text-muted hover:text-red-400 flex justify-center"
-                                                    >
-                                                        <Trash2 size={14} />
-                                                    </button>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-1.5">
+                                                <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Target Sets</label>
+                                                <div className="flex items-center gap-2">
+                                                    <button 
+                                                        onClick={() => updateTargetSets(currentDay.id, exIndex, (exPattern.targetSets || 3) - 1)}
+                                                        className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center hover:bg-white/10 transition-colors"
+                                                    >-</button>
+                                                    <div className="flex-1 bg-secondary rounded-lg py-2 text-center font-bold text-white">
+                                                        {exPattern.targetSets || 3}
+                                                    </div>
+                                                    <button 
+                                                        onClick={() => updateTargetSets(currentDay.id, exIndex, (exPattern.targetSets || 3) + 1)}
+                                                        className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center hover:bg-white/10 transition-colors"
+                                                    >+</button>
                                                 </div>
-                                            ))}
-
-                                            <button
-                                                onClick={() => addSet(currentDay.id, exIndex)}
-                                                className="w-full py-2 flex items-center justify-center gap-2 text-xs font-bold text-primary hover:bg-primary/10 rounded-lg mt-2 transition-colors"
-                                            >
-                                                <Plus size={14} /> Add Set
-                                            </button>
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Target Reps</label>
+                                                <input
+                                                    type="number"
+                                                    value={exPattern.targetReps || 10}
+                                                    onChange={(e) => updateTargetReps(currentDay.id, exIndex, e.target.value)}
+                                                    className="w-full bg-secondary rounded-lg py-2 text-center font-bold text-white focus:ring-1 ring-primary outline-none"
+                                                    placeholder="10"
+                                                />
+                                            </div>
                                         </div>
                                     )}
                                 </div>
@@ -379,7 +408,7 @@ export default function WorkoutBuilder() {
                         })}
 
                         <button
-                            onClick={() => addExercise(currentDay.id)}
+                            onClick={() => openExercisePicker(currentDay.id)}
                             className="w-full py-4 border-2 border-dashed border-secondary rounded-xl text-text-muted hover:border-primary hover:text-primary transition-colors font-semibold flex items-center justify-center gap-2"
                         >
                             <Dumbbell size={20} /> Add Exercise
@@ -390,6 +419,13 @@ export default function WorkoutBuilder() {
                 <div className="flex flex-col items-center justify-center py-20 text-text-muted">
                     <p>Select or Add a Day to start editing.</p>
                 </div>
+            )}
+
+            {pickerOpen && (
+                <ExercisePicker 
+                    onSelect={handlePickerSelect} 
+                    onBack={() => setPickerOpen(false)} 
+                />
             )}
         </div>
     );

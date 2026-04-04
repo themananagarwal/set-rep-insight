@@ -19,6 +19,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import ProfileSetup from "./pages/ProfileSetup";
 import Sessions from "./pages/Sessions";
 import ResetPassword from "./pages/ResetPassword";
+import ExerciseLibrary from "./pages/ExerciseLibrary";
 
 // Protected Route Component
 function ProtectedRoute({ children, reqRole }: { children: React.ReactNode, reqRole?: "admin" | "client" }) {
@@ -44,13 +45,10 @@ function ProtectedRoute({ children, reqRole }: { children: React.ReactNode, reqR
     if (viewMode === "client") return <Navigate to="/" replace />;
   }
 
-  // Client Setup check: if actual client has no height/weight, force setup
-  // Admins in client mode shouldn't be forced to do setup.
+  // MUST be a client with no profile data -> force setup
   if (viewMode === "client" && user.role === "client" && (!user.height || !user.weight)) {
-    if (!isSetupPage) {
-      return <Navigate to="/setup" replace />;
-    }
-    return <>{children}</>;
+    if (isSetupPage) return <>{children}</>;
+    return <Navigate to="/setup" replace />;
   }
 
   // If Setup is done but they visit setup page, redirect to dashboard
@@ -131,6 +129,7 @@ function App() {
             <Route path="/history" element={<HistoryPage />} />
             <Route path="/sessions" element={<Sessions />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/library" element={<ExerciseLibrary />} />
           </Route>
 
           {/* Password Reset — must be public and before catch-all */}

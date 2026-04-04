@@ -10,8 +10,10 @@ interface TrainerState {
     exercises: Exercise[];
     routines: Routine[];
     activeRoutineId: string | null;
+    onTheGoSession: { startTime: number; exercises: { exerciseId: string; targetSets: number; sets: WorkoutSet[] }[] } | null;
 
     // Actions
+    updateOTGSets: (exerciseId: string, sets: WorkoutSet[]) => void;
     setUser: (user: UserProfile | null) => void;
 
     // Routine Management
@@ -21,13 +23,21 @@ interface TrainerState {
     setActiveRoutine: (id: string) => void;
 
     // Legacy mapping (virtual)
-    setRoutine: (routine: Routine) => void; // Keeps backward compat for now
+    setRoutine: (routine: Routine) => void;
 
     addSet: (set: WorkoutSet) => void;
-    addExercise: (name: string, muscle: string) => void;
+    addExercise: (name: string, muscle: string, trackingType?: "reps" | "time") => void;
     completeActiveRoutineDay: () => void;
     getPrediction: (exerciseId: string) => Prediction;
     syncExercises: () => void;
+    updateExerciseDef: (id: string, name: string, muscle: string, trackingType: "reps" | "time") => void;
+    deleteExerciseDef: (id: string) => void;
+    setExerciseNote: (id: string, notes: string) => void;
+
+    startOnTheGo: () => void;
+    endOnTheGo: () => void;
+    addExerciseToOnTheGo: (exerciseId: string) => void;
+
     applySchedulePatch: (patch: import("./program-adjustment").PlanPatch) => void;
 }
 
@@ -40,10 +50,20 @@ export const useTrainerStore = create<TrainerState>()(
                 id: def.id,
                 name: def.name,
                 muscle: def.primaryAxis,
-                type: (def.tags.includes("compound") ? "compound" : "isolation") as "compound" | "isolation"
+                type: (def.tags.includes("compound") ? "compound" : "isolation") as "compound" | "isolation",
+                trackingType: (def.primaryAxis === "Cardio" || def.id === "plank" || def.name.toLowerCase().includes("plank") ? "time" : "reps") as "reps" | "time"
             })),
             routines: [],
             activeRoutineId: null,
+            onTheGoSession: null,
+
+            updateOTGSets: (exerciseId, sets) => set((state) => {
+                if (!state.onTheGoSession) return {};
+                const updatedExercises = state.onTheGoSession.exercises.map(e =>
+                    e.exerciseId === exerciseId ? { ...e, sets } : e
+                );
+                return { onTheGoSession: { ...state.onTheGoSession, exercises: updatedExercises } };
+            }),
 
             setUser: (user) => set({ user }),
 
@@ -78,12 +98,13 @@ export const useTrainerStore = create<TrainerState>()(
                 history: [...state.history, newSet]
             })),
 
-            addExercise: (name, muscle) => set((state) => {
+            addExercise: (name, muscle, trackingType) => set((state) => {
                 const newEx: Exercise = {
-                    id: name.toLowerCase().replace(/\s/g, '_'),
+                    id: name.toLowerCase().replace(/\s/g, '_') + '_' + Date.now().toString(36),
                     name,
                     muscle,
-                    type: "isolation"
+                    type: "isolation",
+                    trackingType: trackingType || "reps"
                 };
                 return { exercises: [...state.exercises, newEx] };
             }),
@@ -123,8 +144,37 @@ export const useTrainerStore = create<TrainerState>()(
                         id: def.id,
                         name: def.name,
                         muscle: def.primaryAxis,
-                        type: (def.tags.includes("compound") ? "compound" : "isolation") as "compound" | "isolation"
+                        type: (def.tags.includes("compound") ? "compound" : "isolation") as "compound" | "isolation",
+                        trackingType: (def.primaryAxis === "Cardio" || def.id === "plank" || def.name.toLowerCase().includes("plank") ? "time" : "reps") as "reps" | "time"
                     }))]
+                };
+            }),
+
+            updateExerciseDef: (id, name, muscle, trackingType) => set((state) => ({
+                exercises: state.exercises.map(e => e.id === id ? { ...e, name, muscle, trackingType } : e)
+            })),
+
+            deleteExerciseDef: (id) => set((state) => {
+                const isSystem = ALL_EXERCISES.some(sys => sys.id === id);
+                if (isSystem) return {};
+                return { exercises: state.exercises.filter(e => e.id !== id) };
+            }),
+
+            setExerciseNote: (id, notes) => set((state) => ({
+                exercises: state.exercises.map(e => e.id === id ? { ...e, notes } : e)
+            })),
+
+            startOnTheGo: () => set({ onTheGoSession: { startTime: Date.now(), exercises: [] } }),
+            endOnTheGo: () => set({ onTheGoSession: null }),
+            addExerciseToOnTheGo: (exerciseId) => set((state) => {
+                if (!state.onTheGoSession) return {};
+                const alreadyAdded = state.onTheGoSession.exercises.some(e => e.exerciseId === exerciseId);
+                if (alreadyAdded) return {};
+                return {
+                    onTheGoSession: {
+                        ...state.onTheGoSession,
+                        exercises: [...state.onTheGoSession.exercises, { exerciseId, targetSets: 3, sets: [] }]
+                    }
                 };
             }),
 
@@ -191,7 +241,8 @@ export const useTrainerStore = create<TrainerState>()(
                 history: state.history,
                 exercises: state.exercises,
                 routines: state.routines,
-                activeRoutineId: state.activeRoutineId
+                activeRoutineId: state.activeRoutineId,
+                onTheGoSession: state.onTheGoSession
             }),
         }
     )

@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTrainerStore } from "../lib/store";
-import { Plus, Calendar, Dumbbell, Trash2, Edit } from "lucide-react";
+import { Plus, Calendar, Dumbbell, Trash2, Edit, Zap, ChevronRight } from "lucide-react";
 
 export default function WorkoutManager() {
     const navigate = useNavigate();
-    const { user, routines, deleteRoutine } = useTrainerStore();
+    const { routines, deleteRoutine, startOnTheGo } = useTrainerStore();
     const [deleteCandidateId, setDeleteCandidateId] = useState<string | null>(null);
 
     const handleDeleteClick = (e: React.MouseEvent, id: string) => {
@@ -47,36 +47,26 @@ export default function WorkoutManager() {
                         >
                             <div className="flex justify-between items-start mb-3">
                                 <div>
-                                    <h3 className="font-bold text-lg flex items-center gap-2">
-                                        {routine.name}
-                                        {routine.authorId && routine.authorId !== user?.id && (
-                                            <span className="px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                                                Trainer Assigned
-                                            </span>
-                                        )}
-                                    </h3>
+                                    <h3 className="font-bold text-lg">{routine.name}</h3>
                                     <p className="text-xs text-text-muted line-clamp-1">{routine.description || routine.rationale}</p>
                                 </div>
-                                
-                                {(!routine.authorId || routine.authorId === user?.id) && (
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                navigate(`/workout/builder/${routine.id}`);
-                                            }}
-                                            className="p-2 bg-secondary hover:bg-white/10 rounded-full text-text-muted hover:text-primary transition-colors"
-                                        >
-                                            <Edit size={16} />
-                                        </button>
-                                        <button
-                                            onClick={(e) => handleDeleteClick(e, routine.id)}
-                                            className="p-2 bg-secondary hover:bg-red-500/20 rounded-full text-text-muted hover:text-red-400 transition-colors"
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </div>
-                                )}
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            navigate(`/workout/builder/${routine.id}`);
+                                        }}
+                                        className="p-2 bg-secondary hover:bg-white/10 rounded-full text-text-muted hover:text-primary transition-colors"
+                                    >
+                                        <Edit size={16} />
+                                    </button>
+                                    <button
+                                        onClick={(e) => handleDeleteClick(e, routine.id)}
+                                        className="p-2 bg-secondary hover:bg-red-500/20 rounded-full text-text-muted hover:text-red-400 transition-colors"
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
+                                </div>
                             </div>
 
                             <div className="flex gap-4 text-xs text-text-muted">
@@ -93,6 +83,42 @@ export default function WorkoutManager() {
                     ))}
                 </div>
             )}
+
+            {/* On The Go Entry - Positioned below routines but distinct */}
+            <div className="pt-6 border-t border-white/5 space-y-4">
+                <div className="flex items-center gap-2 px-1">
+                    <Zap size={14} className="text-amber-400" />
+                    <h2 className="text-[10px] font-bold text-text-muted uppercase tracking-[0.2em]">Live Training</h2>
+                </div>
+                
+                <button
+                    onClick={() => {
+                        startOnTheGo();
+                        navigate("/workout/active?intro=true");
+                    }}
+                    className="w-full group relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary/20 via-primary/5 to-transparent hover:from-primary/30 transition-all p-[1px]"
+                >
+                    <div className="bg-surface rounded-[23px] p-6 flex items-center justify-between relative overflow-hidden backdrop-blur-xl">
+                        <div className="absolute -right-4 -bottom-4 opacity-[0.03] group-hover:scale-110 group-hover:opacity-[0.05] transition-all duration-700">
+                            <Zap size={120} fill="white" />
+                        </div>
+                        
+                        <div className="flex gap-5 items-center relative z-10">
+                            <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center text-primary shadow-[0_0_20px_rgba(99,102,241,0.2)] group-hover:shadow-[0_0_30px_rgba(99,102,241,0.4)] transition-all">
+                                <Zap size={28} fill="currentColor" />
+                            </div>
+                            <div className="text-left">
+                                <h3 className="font-black text-xl text-white tracking-tight">On The Go</h3>
+                                <p className="text-xs text-text-muted font-medium">Flash session. No plan needed.</p>
+                            </div>
+                        </div>
+                        
+                        <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all shadow-lg">
+                            <ChevronRight size={20} />
+                        </div>
+                    </div>
+                </button>
+            </div>
 
             <button
                 onClick={() => navigate("/workout/builder/new")}

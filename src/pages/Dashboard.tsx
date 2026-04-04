@@ -1,14 +1,11 @@
 import { useNavigate } from "react-router-dom";
 import { useTrainerStore } from "../lib/store";
-import { useMockBackendStore } from "../lib/mockBackend";
 import { Play, TrendingUp, AlertCircle, Calendar, Activity, Zap, Layers } from "lucide-react";
 import { format } from "date-fns";
 
 export default function Dashboard() {
     const navigate = useNavigate();
     const { user, history, routines, activeRoutineId } = useTrainerStore();
-    const clientTypes = useMockBackendStore(state => state.clientTypes);
-    const isPhysio = user ? (user.type === 'physio' || clientTypes[user.id] === 'physio') : false;
     const routine = routines.find(r => r.id === activeRoutineId);
 
     const lastWorkout = history.length > 0 ? history[history.length - 1] : null;
@@ -48,38 +45,20 @@ export default function Dashboard() {
                 </div>
             </div>
 
-            {isPhysio ? (
-                 <div className="border border-dashed border-blue-500/30 rounded-2xl p-10 text-center space-y-4 mt-8 bg-blue-500/5">
-                    <Activity className="mx-auto text-blue-500/50" size={40} />
-                    <div className="space-y-2">
-                        <h2 className="text-xl font-medium text-white tracking-tight">Physiotherapy Portal</h2>
-                        <p className="text-sm text-text-muted max-w-sm mx-auto leading-relaxed">
-                            Your recovery and treatment plan is managed securely by your provider. Please consult them directly for your protocol and visit schedules.
-                        </p>
-                    </div>
-                </div>
-            ) : (
-            <>
             {/* Active Protocol Card */}
             {routine ? (
                 <div className="group relative overflow-hidden rounded-2xl bg-surface border border-white/5 p-1 transition-all hover:border-white/10">
                     <div className="relative z-10 bg-surface-highlight/10 backdrop-blur-sm p-6 rounded-xl space-y-6">
                         <div className="flex justify-between items-start">
                             <div className="space-y-1">
-                                {routine.authorId && routine.authorId !== user?.id ? (
-                                    <span className="inline-block px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/20 mb-2">
-                                        Assigned by Trainer
-                                    </span>
-                                ) : (
-                                    <span className="inline-block px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider bg-primary/10 text-primary mb-2">
-                                        Custom Plan
-                                    </span>
-                                )}
+                                <span className="inline-block px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider bg-primary/10 text-primary mb-2">
+                                    Up Next
+                                </span>
                                 <h2 className="text-2xl font-semibold text-white tracking-tight">
                                     {routine.days[routine.currentDayIndex].name}
                                 </h2>
                                 <p className="text-xs text-text-muted font-medium tracking-wide">
-                                    Phase {routine.currentDayIndex + 1} of {routine.days.length} • {routine.name}
+                                    Next in cycle • {routine.name}
                                 </p>
                             </div>
                             <Calendar size={24} className="text-white/20" />
@@ -124,7 +103,7 @@ export default function Dashboard() {
                         onClick={() => navigate("/workout/builder/new")}
                         className="px-6 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-xs font-medium uppercase tracking-wide transition-colors text-white"
                     >
-                        Create Custom Plan
+                        Create Plan
                     </button>
                 </div>
             )}
@@ -178,8 +157,6 @@ export default function Dashboard() {
                     </div>
                 </div>
             </div>
-            </>
-            )}
         </div>
     );
 }

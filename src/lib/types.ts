@@ -31,6 +31,8 @@ export type Exercise = {
     name: string;
     muscle: string;
     type: "compound" | "isolation";
+    trackingType?: "reps" | "time"; // Optional: for timed exercises (planks, cardio)
+    notes?: string; // Per-exercise notes
 };
 
 export type WorkoutSet = {
