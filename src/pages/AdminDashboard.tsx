@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import type { UserProfile, Routine } from '../lib/types';
 import { useMockBackendStore } from '../lib/mockBackend';
-import { Users, BookOpen, Settings, LogOut, Plus, User as UserIcon, ArrowLeft, Activity, Calendar, X, Dices, Dumbbell, Pencil } from 'lucide-react';
+import { useTrainerStore } from '../lib/store';
+import { Users, BookOpen, Settings, LogOut, Plus, User as UserIcon, ArrowLeft, Activity, Calendar, X, Dices, Dumbbell, Pencil, Search, Trash2, CheckCircle } from 'lucide-react';
 
 export default function AdminDashboard() {
     const { user, logout, switchViewMode } = useAuth();
@@ -30,10 +31,55 @@ export default function AdminDashboard() {
     const updateUser = useMockBackendStore(state => state.updateUser);
     const setClientTypeMock = useMockBackendStore(state => state.setClientType);
     const clientTypes = useMockBackendStore(state => state.clientTypes);
+    const globalExercises = useMockBackendStore(state => state.globalExercises);
+    const addGlobalExercise = useMockBackendStore(state => state.addGlobalExercise);
+    const updateGlobalExercise = useMockBackendStore(state => state.updateGlobalExercise);
+    const deleteGlobalExercise = useMockBackendStore(state => state.deleteGlobalExercise);
+    const { exercises: clientExercises } = useTrainerStore();
+
     const physioEvaluations = useMockBackendStore(state => state.physioEvaluations);
     const physioSessionNotes = useMockBackendStore(state => state.physioSessionNotes);
     const savePhysioEvaluation = useMockBackendStore(state => state.savePhysioEvaluation);
     const addPhysioSessionNote = useMockBackendStore(state => state.addPhysioSessionNote);
+
+    // Library State
+    const [libSearch, setLibSearch] = useState('');
+    const [libFilter, setLibFilter] = useState<'all' | 'system' | 'global'>('all');
+    const [isAddingExercise, setIsAddingExercise] = useState(false);
+    const [editingExercise, setEditingExercise] = useState<string | null>(null);
+    const [exForm, setExForm] = useState({ name: '', muscle: '', trackingType: 'reps' as 'reps' | 'time' });
+
+    // Merge system exercises + global exercises for the admin library view
+    const adminLibrary = useMemo(() => {
+        const systemExs = clientExercises.map(e => ({ ...e, scope: e.scope || 'system' as const }));
+        return [
+            ...systemExs,
+            ...globalExercises,
+        ].filter(e => {
+            const q = libSearch.toLowerCase();
+            const matchSearch = !q || e.name.toLowerCase().includes(q) || e.muscle.toLowerCase().includes(q);
+            const matchFilter = libFilter === 'all' || e.scope === libFilter;
+            return matchSearch && matchFilter;
+        });
+    }, [clientExercises, globalExercises, libSearch, libFilter]);
+
+    const handleAddGlobalExercise = () => {
+        if (!exForm.name.trim() || !exForm.muscle.trim() || !user) return;
+        addGlobalExercise({
+            name: exForm.name.trim(),
+            muscle: exForm.muscle.trim(),
+            type: 'isolation',
+            trackingType: exForm.trackingType,
+        }, user.id);
+        setExForm({ name: '', muscle: '', trackingType: 'reps' });
+        setIsAddingExercise(false);
+    };
+
+    const handleUpdateGlobalExercise = (id: string) => {
+        updateGlobalExercise(id, { name: exForm.name.trim(), muscle: exForm.muscle.trim(), trackingType: exForm.trackingType });
+        setEditingExercise(null);
+        setExForm({ name: '', muscle: '', trackingType: 'reps' });
+    };
 
     const [evalForm, setEvalForm] = useState({ symptoms: '', painPoints: '', preliminaryDiagnosis: '', finalDiagnosis: '' });
     const [noteForm, setNoteForm] = useState({ patientFeedback: '', treatmentDone: '', remarks: '' });
@@ -522,20 +568,133 @@ export default function AdminDashboard() {
                 )}
                 
                 {activeTab === 'library' && (
-                    <div className="max-w-4xl mx-auto space-y-8">
+                    <div className="max-w-5xl mx-auto space-y-6">
                         <div className="flex items-center justify-between">
                             <div>
-                                <h2 className="text-3xl font-bold tracking-tight mb-2">Workout Library</h2>
-                                <p className="text-zinc-400">Master templates you can assign to any client.</p>
+                                <h2 className="text-3xl font-bold tracking-tight mb-1">Exercise Library</h2>
+                                <p className="text-zinc-400 text-sm">System exercises are read-only. Add your own global exercises visible to all clients.</p>
+                            </div>
+                            <button
+                                onClick={() => { setIsAddingExercise(true); setExForm({ name: '', muscle: '', trackingType: 'reps' }); }}
+                                className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 rounded-full font-bold transition-colors shadow-[0_0_20px_rgba(220,38,38,0.3)]"
+                            >
+                                <Plus size={18} /> Add Exercise
+                            </button>
+                        </div>
+
+                        {/* Search + Filter */}
+                        <div className="flex gap-3">
+                            <div className="relative flex-1">
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
+                                <input
+                                    type="text"
+                                    placeholder="Search exercises..."
+                                    value={libSearch}
+                                    onChange={e => setLibSearch(e.target.value)}
+                                    className="w-full bg-zinc-900 border border-white/10 rounded-xl py-2.5 pl-10 pr-4 text-white text-sm placeholder:text-zinc-600 focus:outline-none focus:border-red-500/50"
+                                />
+                            </div>
+                            <div className="flex bg-zinc-900 p-1 rounded-xl border border-white/10">
+                                {(['all', 'system', 'global'] as const).map(f => (
+                                    <button
+                                        key={f}
+                                        onClick={() => setLibFilter(f)}
+                                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all capitalize ${
+                                            libFilter === f ? 'bg-zinc-800 text-white' : 'text-zinc-500 hover:text-zinc-300'
+                                        }`}
+                                    >{f === 'global' ? 'Your Exercises' : f}</button>
+                                ))}
                             </div>
                         </div>
-                        <div className="bg-zinc-900/50 border border-white/5 rounded-3xl p-12 text-center">
-                                <BookOpen size={48} className="mx-auto text-zinc-600 mb-4" />
-                                <h3 className="text-xl font-bold mb-2">Coming Soon</h3>
-                                <p className="text-zinc-400 max-w-sm mx-auto">
-                                    This is where you will build and store your master workout templates.
-                                </p>
+
+                        {/* Stats Bar */}
+                        <div className="flex gap-4 text-xs text-zinc-500">
+                            <span>📚 {adminLibrary.filter(e => e.scope !== 'global').length} System</span>
+                            <span>✨ {globalExercises.length} Added by You</span>
+                            <span>🔍 {adminLibrary.length} shown</span>
+                        </div>
+
+                        {/* Add Exercise Form */}
+                        {isAddingExercise && (
+                            <div className="bg-zinc-900 border border-red-500/30 rounded-2xl p-6 space-y-4">
+                                <h3 className="font-bold text-white">Add Global Exercise</h3>
+                                <p className="text-xs text-zinc-400">This exercise will be visible to <strong className="text-red-400">all clients</strong> in their workout library.</p>
+                                <div className="grid grid-cols-3 gap-3">
+                                    <input
+                                        type="text" placeholder="Exercise name *" value={exForm.name}
+                                        onChange={e => setExForm(s => ({ ...s, name: e.target.value }))}
+                                        className="bg-zinc-800 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-red-500/50 col-span-1"
+                                    />
+                                    <input
+                                        type="text" placeholder="Muscle group *" value={exForm.muscle}
+                                        onChange={e => setExForm(s => ({ ...s, muscle: e.target.value }))}
+                                        className="bg-zinc-800 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-red-500/50"
+                                    />
+                                    <select
+                                        value={exForm.trackingType}
+                                        onChange={e => setExForm(s => ({ ...s, trackingType: e.target.value as 'reps' | 'time' }))}
+                                        className="bg-zinc-800 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-red-500/50"
+                                    >
+                                        <option value="reps">Reps Based</option>
+                                        <option value="time">Time Based</option>
+                                    </select>
+                                </div>
+                                <div className="flex gap-2">
+                                    <button onClick={handleAddGlobalExercise} className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-bold transition-colors">Add to Library</button>
+                                    <button onClick={() => setIsAddingExercise(false)} className="px-5 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl text-sm font-medium transition-colors">Cancel</button>
+                                </div>
                             </div>
+                        )}
+
+                        {/* Exercise List */}
+                        <div className="space-y-2">
+                            {adminLibrary.length === 0 ? (
+                                <div className="py-16 text-center border-2 border-dashed border-white/5 rounded-2xl">
+                                    <BookOpen size={40} className="mx-auto text-zinc-600 mb-3" />
+                                    <p className="text-zinc-500 text-sm">No exercises match your search.</p>
+                                </div>
+                            ) : adminLibrary.map(ex => (
+                                <div key={ex.id} className="flex items-center justify-between bg-zinc-900/60 border border-white/5 rounded-xl px-5 py-4 group hover:border-white/10 transition-all">
+                                    {editingExercise === ex.id ? (
+                                        <div className="flex-1 grid grid-cols-3 gap-3 mr-3">
+                                            <input value={exForm.name} onChange={e => setExForm(s => ({ ...s, name: e.target.value }))} className="bg-zinc-800 border border-white/10 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-red-500/50" />
+                                            <input value={exForm.muscle} onChange={e => setExForm(s => ({ ...s, muscle: e.target.value }))} className="bg-zinc-800 border border-white/10 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-red-500/50" />
+                                            <select value={exForm.trackingType} onChange={e => setExForm(s => ({ ...s, trackingType: e.target.value as 'reps' | 'time' }))} className="bg-zinc-800 border border-white/10 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-red-500/50">
+                                                <option value="reps">Reps</option>
+                                                <option value="time">Time</option>
+                                            </select>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center gap-4 flex-1">
+                                            <div className={`w-2 h-2 rounded-full flex-shrink-0 ${ ex.scope === 'global' ? 'bg-red-500' : 'bg-zinc-600' }`} />
+                                            <div>
+                                                <p className="text-white font-medium text-sm">{ex.name}</p>
+                                                <p className="text-zinc-500 text-xs">{ex.muscle} · {ex.trackingType === 'time' ? '⏱ Time' : '🔁 Reps'}</p>
+                                            </div>
+                                            {ex.scope === 'global' && (
+                                                <span className="ml-auto mr-4 text-[10px] font-bold uppercase tracking-widest text-red-400 bg-red-500/10 px-2 py-0.5 rounded-full border border-red-500/20">Global</span>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        {ex.scope === 'global' && editingExercise === ex.id ? (
+                                            <>
+                                                <button onClick={() => handleUpdateGlobalExercise(ex.id)} className="p-2 text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-colors"><CheckCircle size={16} /></button>
+                                                <button onClick={() => setEditingExercise(null)} className="p-2 text-zinc-400 hover:bg-zinc-700 rounded-lg transition-colors"><X size={16} /></button>
+                                            </>
+                                        ) : ex.scope === 'global' ? (
+                                            <>
+                                                <button onClick={() => { setEditingExercise(ex.id); setExForm({ name: ex.name, muscle: ex.muscle, trackingType: ex.trackingType || 'reps' }); }} className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-700 rounded-lg transition-colors"><Pencil size={16} /></button>
+                                                <button onClick={() => deleteGlobalExercise(ex.id)} className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"><Trash2 size={16} /></button>
+                                            </>
+                                        ) : (
+                                            <span className="text-[9px] text-zinc-600 uppercase tracking-widest pr-1">System</span>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 )}
 

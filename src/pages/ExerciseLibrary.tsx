@@ -1,14 +1,26 @@
 import { useState, useMemo } from "react";
 import { useTrainerStore } from "../lib/store";
+import { useMockBackendStore } from "../lib/mockBackend";
 import { EXERCISE_LIBRARY } from "../lib/exercises";
-import { Dumbbell, Search, Edit2, Trash2, Plus, Clock, Target, MoreVertical } from "lucide-react";
+import { Dumbbell, Search, Edit2, Trash2, Plus, Clock, Target, MoreVertical, Globe } from "lucide-react";
 import clsx from "clsx";
 
 export default function ExerciseLibrary() {
     const { exercises, addExercise, updateExerciseDef, deleteExerciseDef } = useTrainerStore();
+    const globalExercises = useMockBackendStore(state => state.globalExercises);
     const [search, setSearch] = useState("");
     const [isCreating, setIsCreating] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
+
+    // Merge: system/private exercises + global admin exercises (dedup by ID)
+    const allExercises = useMemo(() => {
+        const ids = new Set(exercises.map(e => e.id));
+        const merged = [...exercises];
+        globalExercises.forEach(g => {
+            if (!ids.has(g.id)) merged.push({ ...g, scope: 'global' as const });
+        });
+        return merged;
+    }, [exercises, globalExercises]);
 
     // Form State
     const [newName, setNewName] = useState("");
@@ -16,22 +28,22 @@ export default function ExerciseLibrary() {
     const [newType, setNewType] = useState<"reps" | "time">("reps");
 
     const muscles = useMemo(() => 
-        Array.from(new Set(exercises.map(e => {
+        Array.from(new Set(allExercises.map(e => {
             const m = e.muscle.trim();
             return m.charAt(0).toUpperCase() + m.slice(1).toLowerCase();
         }))).sort()
-    , [exercises]);
+    , [allExercises]);
 
     const filteredExercises = useMemo(() => {
         const query = search.toLowerCase();
-        return exercises.filter(e => 
+        return allExercises.filter(e => 
             e.name.toLowerCase().includes(query) || 
             e.muscle.toLowerCase().includes(query)
         );
-    }, [exercises, search]);
+    }, [allExercises, search]);
 
     const groupedExercises = useMemo(() => {
-        const groups: Record<string, typeof exercises> = {};
+        const groups: Record<string, typeof allExercises> = {};
         filteredExercises.forEach(ex => {
             const m = ex.muscle.trim();
             const normalizedMuscle = m.charAt(0).toUpperCase() + m.slice(1).toLowerCase();
@@ -106,7 +118,8 @@ export default function ExerciseLibrary() {
                         <h3 className="text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] px-1">{muscle}</h3>
                         <div className="grid grid-cols-1 gap-2">
                             {groupedExercises[muscle].map(ex => {
-                                const isCustom = !EXERCISE_LIBRARY[ex.id];
+                                const isCustom = !EXERCISE_LIBRARY[ex.id] && ex.scope !== 'global';
+                                const isGlobal = ex.scope === 'global';
                                 return (
                                     <div key={ex.id} className="bg-surface border border-white/5 p-4 rounded-2xl flex items-center justify-between group hover:border-white/10 transition-colors">
                                         <div className="flex items-center gap-4">
@@ -117,8 +130,13 @@ export default function ExerciseLibrary() {
                                                 <p className="font-bold text-white tracking-tight">{ex.name}</p>
                                                 <div className="flex items-center gap-2 mt-0.5">
                                                     <span className="text-[9px] font-black uppercase tracking-wider text-text-muted border border-white/10 px-1.5 py-0.5 rounded">
-                                                        {ex.trackingType}
+                                                        {ex.trackingType || 'reps'}
                                                     </span>
+                                                    {isGlobal && (
+                                                        <span className="text-[9px] font-black uppercase tracking-wider text-red-400 border border-red-500/20 bg-red-500/10 px-1.5 py-0.5 rounded flex items-center gap-1">
+                                                            <Globe size={8} /> Global
+                                                        </span>
+                                                    )}
                                                     {isCustom && (
                                                         <span className="text-[9px] font-black uppercase tracking-wider text-primary border border-primary/20 px-1.5 py-0.5 rounded">
                                                             Custom
@@ -129,7 +147,9 @@ export default function ExerciseLibrary() {
                                         </div>
 
                                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            {isCustom && (
+                                            {isGlobal ? (
+                                                <span className="text-[9px] text-zinc-600 uppercase tracking-widest pr-1">Admin Added</span>
+                                            ) : isCustom ? (
                                                 <>
                                                     <button 
                                                         onClick={() => startEdit(ex)}
@@ -144,9 +164,9 @@ export default function ExerciseLibrary() {
                                                         <Trash2 size={16} />
                                                     </button>
                                                 </>
-                                            )}
+                                            ) : null}
                                         </div>
-                                        {/* Mobile view action dots - for better touch targets if group-hover is weak */}
+                                        {/* Mobile view */}
                                         <div className="lg:hidden">
                                             {isCustom ? (
                                                 <button onClick={() => startEdit(ex)} className="p-2 text-text-muted"><MoreVertical size={18} /></button>

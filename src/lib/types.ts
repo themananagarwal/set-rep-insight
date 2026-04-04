@@ -33,6 +33,8 @@ export type Exercise = {
     type: "compound" | "isolation";
     trackingType?: "reps" | "time"; // Optional: for timed exercises (planks, cardio)
     notes?: string; // Per-exercise notes
+    scope?: "system" | "global" | "private"; // system = built-in, global = admin added for all clients, private = client-only
+    createdBy?: string; // userId who created it (admin or client)
 };
 
 export type WorkoutSet = {

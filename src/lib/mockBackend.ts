@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { UserProfile, Routine, WorkoutSet, SessionPackage, SessionLog, ClientType, PhysioEvaluation, PhysioSessionNote } from "./types";
+import type { UserProfile, Routine, WorkoutSet, SessionPackage, SessionLog, ClientType, PhysioEvaluation, PhysioSessionNote, Exercise } from "./types";
 
 interface MockBackendState {
     users: UserProfile[];
@@ -20,9 +20,15 @@ interface MockBackendState {
     getClientsForTrainer: (trainerId: string) => UserProfile[];
     assignRoutineToClient: (clientId: string, routine: Routine) => void;
 
-    // Custom exercises
+    // Custom exercises (legacy, kept for compat)
     customExercises: Array<{ id: string; name: string; primaryAxis: string; trackingType: 'reps' | 'time'; trainerId: string }>;
     addCustomExercise: (ex: { name: string; primaryAxis: string; trackingType: 'reps' | 'time'; trainerId: string }) => void;
+
+    // Global exercises: admin-added, visible to ALL clients
+    globalExercises: Exercise[];
+    addGlobalExercise: (ex: Omit<Exercise, 'id' | 'scope'>, adminId: string) => Exercise;
+    updateGlobalExercise: (id: string, updates: Partial<Exercise>) => void;
+    deleteGlobalExercise: (id: string) => void;
 
     // ── SESSION SYSTEM ────────────────────────────────────────────────────────
     sessionPackages: SessionPackage[];
@@ -73,6 +79,7 @@ export const useMockBackendStore = create<MockBackendState>()(
             routinesByUserId: {},
             historyByUserId: {},
             customExercises: [],
+            globalExercises: [],
             sessionPackages: [],
             sessionLogs: [],
             usedNonces: [],
@@ -127,6 +134,25 @@ export const useMockBackendStore = create<MockBackendState>()(
 
             addCustomExercise: (ex) => set(state => ({
                 customExercises: [...state.customExercises, { ...ex, id: `custom_${Date.now()}` }]
+            })),
+
+            addGlobalExercise: (ex, adminId) => {
+                const newEx: Exercise = {
+                    ...ex,
+                    id: `global_${Date.now().toString(36)}`,
+                    scope: 'global',
+                    createdBy: adminId,
+                };
+                set(state => ({ globalExercises: [...state.globalExercises, newEx] }));
+                return newEx;
+            },
+
+            updateGlobalExercise: (id, updates) => set(state => ({
+                globalExercises: state.globalExercises.map(e => e.id === id ? { ...e, ...updates } : e)
+            })),
+
+            deleteGlobalExercise: (id) => set(state => ({
+                globalExercises: state.globalExercises.filter(e => e.id !== id)
             })),
 
             assignRoutineToClient: (clientId, routine) => set((state) => {
