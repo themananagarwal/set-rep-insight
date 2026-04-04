@@ -26,7 +26,7 @@ export default function AdminDashboard() {
     const clients = user ? users.filter(u => u.role === "client" && u.trainerId === user.id) : [];
     const trainers = user ? users.filter(u => u.role === "admin" && u.trainerId === user.id) : [];
     const clientRoutines = useMockBackendStore(state => state.routinesByUserId);
-    const assignRoutine = useMockBackendStore(state => state.assignRoutineToClient);
+    const removeRoutineFromClient = useMockBackendStore(state => state.removeRoutineFromClient);
     const addClient = useMockBackendStore(state => state.addUser);
     const deleteUser = useMockBackendStore(state => state.deleteUser);
     const updateUser = useMockBackendStore(state => state.updateUser);
@@ -55,6 +55,7 @@ export default function AdminDashboard() {
     const [isAddingProgram, setIsAddingProgram] = useState(false);
     const [progForm, setProgForm] = useState({ name: '', description: '', scope: 'template' as 'template' | 'client-specific', assignedTo: '' });
     const [selectedProgramToAssign, setSelectedProgramToAssign] = useState<string | null>(null);
+    const [assigningToClient, setAssigningToClient] = useState<string | null>(null);
     const [editingRoutine, setEditingRoutine] = useState<import('../lib/types').TrainerRoutine | null>(null);
 
     // Library State
@@ -147,21 +148,8 @@ export default function AdminDashboard() {
         setEditingTrainer(null);
     };
 
-    const handleAssignMockRoutine = (clientId: string) => {
-        const mockRoutine: Routine = {
-            id: `routine-${Date.now()}`,
-            name: "Hypertrophy Push/Pull/Legs",
-            rationale: "Assigned by Trainer for maximizing muscle growth.",
-            days: [
-                { id: "day1", name: "Push Day", exercises: [] }
-            ],
-            currentDayIndex: 0,
-            startDate: Date.now(),
-            lastModified: Date.now(),
-            authorId: user?.id,
-        };
-        assignRoutine(clientId, mockRoutine);
-    };
+        // handleAssignMockRoutine removed in favor of precise trainer template assignment
+
 
     if (!user || user.role !== 'admin') {
         return <div className="p-8 text-white">Access Denied: Admins Only</div>;
@@ -347,7 +335,7 @@ export default function AdminDashboard() {
                                     <Calendar className="text-red-500" /> Assigned Programs
                                 </h3>
                                 <button 
-                                    onClick={() => handleAssignMockRoutine(selectedClient.id)}
+                                    onClick={() => setAssigningToClient(selectedClient.id)}
                                     className="px-4 py-2 bg-white text-black font-bold rounded-xl hover:bg-zinc-200 transition-colors"
                                 >
                                     Assign Program
@@ -366,8 +354,21 @@ export default function AdminDashboard() {
                                                 <h4 className="text-lg font-bold text-white mb-1">{routine.name}</h4>
                                                 <p className="text-sm text-zinc-400">{routine.rationale}</p>
                                             </div>
-                                            <div className="text-sm font-medium text-red-500 bg-red-500/10 px-4 py-1.5 rounded-full">
-                                                Active Template
+                                            <div className="flex items-center gap-4">
+                                                <div className="text-sm font-medium text-red-500 bg-red-500/10 px-4 py-1.5 rounded-full">
+                                                    Active Program
+                                                </div>
+                                                <button 
+                                                    onClick={() => {
+                                                        if (confirm('Remove this program from client?')) {
+                                                            removeRoutineFromClient(selectedClient.id, routine.id);
+                                                        }
+                                                    }}
+                                                    className="p-2 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                                                    title="Remove Program"
+                                                >
+                                                    <Trash2 size={18} />
+                                                </button>
                                             </div>
                                         </div>
                                     ))
@@ -1065,6 +1066,36 @@ export default function AdminDashboard() {
                                 Save Changes
                             </button>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Assign Program to Client Modal (From Client View) */}
+            {assigningToClient && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-6">
+                    <div className="bg-zinc-950 border border-white/10 p-8 rounded-3xl w-full max-w-sm shadow-2xl relative">
+                         <button onClick={() => setAssigningToClient(null)} className="absolute top-6 right-6 text-zinc-500 hover:text-white"><X size={20}/></button>
+                         <h3 className="text-xl font-bold mb-4">Assign Program</h3>
+                         <p className="text-sm text-zinc-400 mb-6">Select a program to push to this client's app.</p>
+                         <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                            {trainerRoutines.length === 0 ? (
+                                <p className="text-zinc-500 text-sm text-center py-4">No programs built yet. Go to Programs tab first.</p>
+                            ) : (
+                                trainerRoutines.map(tr => (
+                                    <button 
+                                        key={tr.id} 
+                                        onClick={() => {
+                                            assignTrainerRoutineToClient(tr.id, assigningToClient);
+                                            setAssigningToClient(null);
+                                        }}
+                                        className="w-full flex items-center justify-between text-left px-4 py-3 bg-zinc-900 border border-white/5 hover:bg-zinc-800 hover:border-red-500/30 rounded-xl transition-colors"
+                                    >
+                                        <p className="font-bold">{tr.name}</p>
+                                        <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">{tr.days.length} Days</span>
+                                    </button>
+                                ))
+                            )}
+                         </div>
                     </div>
                 </div>
             )}

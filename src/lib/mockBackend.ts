@@ -19,6 +19,7 @@ interface MockBackendState {
     // Admin specific
     getClientsForTrainer: (trainerId: string) => UserProfile[];
     assignRoutineToClient: (clientId: string, routine: Routine) => void;
+    removeRoutineFromClient: (clientId: string, routineId: string) => void;
 
     // Custom exercises (legacy, kept for compat)
     customExercises: Array<{ id: string; name: string; primaryAxis: string; trackingType: 'reps' | 'time'; trainerId: string }>;
@@ -235,6 +236,11 @@ export const useMockBackendStore = create<MockBackendState>()(
                 const clientRoutines = state.routinesByUserId[clientId] || [];
                 if (clientRoutines.some(r => r.id === routine.id)) return state;
                 return { routinesByUserId: { ...state.routinesByUserId, [clientId]: [...clientRoutines, routine] } };
+            }),
+
+            removeRoutineFromClient: (clientId, routineId) => set((state) => {
+                const clientRoutines = state.routinesByUserId[clientId] || [];
+                return { routinesByUserId: { ...state.routinesByUserId, [clientId]: clientRoutines.filter(r => r.id !== routineId) } };
             }),
 
             // ── SESSION ACTIONS ───────────────────────────────────────────────
