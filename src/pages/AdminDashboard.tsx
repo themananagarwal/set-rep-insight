@@ -56,6 +56,7 @@ export default function AdminDashboard() {
     const [progForm, setProgForm] = useState({ name: '', description: '', scope: 'template' as 'template' | 'client-specific', assignedTo: '' });
     const [selectedProgramToAssign, setSelectedProgramToAssign] = useState<string | null>(null);
     const [assigningToClient, setAssigningToClient] = useState<string | null>(null);
+    const [clientRoutineToDelete, setClientRoutineToDelete] = useState<{ clientId: string; routineId: string } | null>(null);
     const [editingRoutine, setEditingRoutine] = useState<import('../lib/types').TrainerRoutine | null>(null);
 
     // Library State
@@ -359,11 +360,7 @@ export default function AdminDashboard() {
                                                     Active Program
                                                 </div>
                                                 <button 
-                                                    onClick={() => {
-                                                        if (confirm('Remove this program from client?')) {
-                                                            removeRoutineFromClient(selectedClient.id, routine.id);
-                                                        }
-                                                    }}
+                                                    onClick={() => setClientRoutineToDelete({ clientId: selectedClient.id, routineId: routine.id })}
                                                     className="p-2 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
                                                     title="Remove Program"
                                                 >
@@ -1096,6 +1093,29 @@ export default function AdminDashboard() {
                                 ))
                             )}
                          </div>
+                    </div>
+                </div>
+            )}
+
+            {/* In-App Remove Client Routine Modal */}
+            {clientRoutineToDelete && (
+                <div className="fixed inset-0 z-[110] bg-black/80 backdrop-blur-sm flex items-center justify-center p-6">
+                    <div className="bg-zinc-900 border border-white/10 rounded-2xl p-6 max-w-sm w-full shadow-2xl">
+                        <h3 className="text-xl font-bold text-white mb-2">Remove Assigned Program?</h3>
+                        <p className="text-zinc-400 text-sm mb-6">Are you sure you want to unassign this program from the client's app?</p>
+                        <div className="flex gap-3">
+                            <button 
+                                onClick={() => {
+                                    removeRoutineFromClient(clientRoutineToDelete.clientId, clientRoutineToDelete.routineId);
+                                    setClientRoutineToDelete(null);
+                                }}
+                                className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2.5 rounded-xl font-bold transition-colors"
+                            >Remove</button>
+                            <button 
+                                onClick={() => setClientRoutineToDelete(null)}
+                                className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white py-2.5 rounded-xl font-bold transition-colors"
+                            >Cancel</button>
+                        </div>
                     </div>
                 </div>
             )}
