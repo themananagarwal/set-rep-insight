@@ -18,6 +18,9 @@ import ProfileSetup from "./pages/ProfileSetup";
 import ExerciseLibrary from "./pages/ExerciseLibrary";
 import Profile from "./pages/Profile";
 import AdminDashboard from "./pages/AdminDashboard";
+import AdminLogin from "./pages/AdminLogin";
+import Login from "./pages/Login";
+import SignUp from "./pages/SignUp";
 
 // Protected Route Component
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -143,6 +146,11 @@ function App() {
             <Route path="/profile" element={<Profile />} />
             <Route path="/admin" element={<AdminDashboard />} />
           </Route>
+
+          {/* Auth Flow */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="/signup" element={<SignUp />} />
 
           {/* Catch-all/Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
