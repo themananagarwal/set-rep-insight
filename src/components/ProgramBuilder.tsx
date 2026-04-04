@@ -60,9 +60,10 @@ export function ProgramBuilder({ routine: initialRoutine, onClose }: Props) {
             ...r,
             days: r.days.map(d => {
                 if (d.id !== dayId) return d;
-                const newEx = [...d.exercises];
-                newEx.splice(exIndex, 1);
-                return { ...d, exercises: newEx };
+                return { 
+                    ...d, 
+                    exercises: d.exercises.filter((_, i) => i !== exIndex)
+                };
             })
         }));
     };
@@ -72,11 +73,16 @@ export function ProgramBuilder({ routine: initialRoutine, onClose }: Props) {
             ...r,
             days: r.days.map(d => {
                 if (d.id !== dayId) return d;
-                const newEx = [...d.exercises];
-                const sets = newEx[exIndex].sets;
-                const lastSet = sets.length > 0 ? sets[sets.length - 1] : { type: 'working' as const, reps: '10' };
-                newEx[exIndex].sets = [...sets, { ...lastSet, id: crypto.randomUUID() }];
-                return { ...d, exercises: newEx };
+                return {
+                    ...d,
+                    exercises: d.exercises.map((ex, i) => {
+                        if (i !== exIndex) return ex;
+                        const lastSet = ex.sets.length > 0 ? ex.sets[ex.sets.length - 1] : { type: 'working' as const, reps: '10' };
+                        // Don't carry over the exact same ID, create a new one
+                        const newSet = { ...lastSet, id: crypto.randomUUID() };
+                        return { ...ex, sets: [...ex.sets, newSet] };
+                    })
+                };
             })
         }));
     };
@@ -86,22 +92,36 @@ export function ProgramBuilder({ routine: initialRoutine, onClose }: Props) {
             ...r,
             days: r.days.map(d => {
                 if (d.id !== dayId) return d;
-                const newEx = [...d.exercises];
-                newEx[exIndex].sets = newEx[exIndex].sets.filter((_, i) => i !== setIndex);
-                return { ...d, exercises: newEx };
+                return {
+                    ...d,
+                    exercises: d.exercises.map((ex, i) => {
+                        if (i !== exIndex) return ex;
+                        return { ...ex, sets: ex.sets.filter((_, sIdx) => sIdx !== setIndex) };
+                    })
+                };
             })
         }));
     };
 
-    const updateSet = (dayId: string, exIndex: number, setIndex: number, key: 'weight' | 'reps' | 'duration', val: string) => {
+    const updateSet = (dayId: string, exIndex: number, setIndex: number, key: 'reps' | 'duration', val: string) => {
         setRoutine(r => ({
             ...r,
             days: r.days.map(d => {
                 if (d.id !== dayId) return d;
-                const newEx = [...d.exercises];
-                const numericVal = val === '' ? undefined : Number(val);
-                newEx[exIndex].sets[setIndex] = { ...newEx[exIndex].sets[setIndex], [key]: numericVal };
-                return { ...d, exercises: newEx };
+                return {
+                    ...d,
+                    exercises: d.exercises.map((ex, i) => {
+                        if (i !== exIndex) return ex;
+                        const numericVal = val === '' ? undefined : Number(val);
+                        return {
+                            ...ex,
+                            sets: ex.sets.map((s, sIdx) => {
+                                if (sIdx !== setIndex) return s;
+                                return { ...s, [key]: numericVal };
+                            })
+                        };
+                    })
+                };
             })
         }));
     };
@@ -164,23 +184,17 @@ export function ProgramBuilder({ routine: initialRoutine, onClose }: Props) {
                                         </div>
                                         
                                         {/* Sets Table Header */}
-                                        <div className="grid grid-cols-[30px_1fr_1fr_40px] gap-3 items-center text-xs font-bold tracking-wider text-zinc-500 px-2 mt-2 mb-2">
+                                        <div className="grid grid-cols-[30px_1fr_40px] gap-3 items-center text-xs font-bold tracking-wider text-zinc-500 px-2 mt-2 mb-2">
                                             <span className="text-center">SET</span>
-                                            <span>WEIGHT</span>
-                                            <span>{isTime ? 'DURATION (s)' : 'REPS'}</span>
+                                            <span>{isTime ? 'DURATION (s)' : 'TARGET REPS'}</span>
                                             <span></span>
                                         </div>
                                         
                                         {/* Sets Rows */}
                                         <div className="space-y-2">
                                             {p.sets.map((set, setIndex) => (
-                                                <div key={setIndex} className="grid grid-cols-[30px_1fr_1fr_40px] gap-3 items-center group/set">
+                                                <div key={setIndex} className="grid grid-cols-[30px_1fr_40px] gap-3 items-center group/set">
                                                     <span className="text-xs font-bold text-center text-zinc-400">{setIndex + 1}</span>
-                                                    <input 
-                                                        type="number" value={set.weight ?? ''} placeholder="0"
-                                                        onChange={e => updateSet(day.id, exIndex, setIndex, 'weight', e.target.value)}
-                                                        className="bg-zinc-800 border border-transparent hover:border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-red-500/50 transition-colors"
-                                                    />
                                                     <input 
                                                         type="number" value={(isTime ? set.duration : set.reps) ?? ''} placeholder="0"
                                                         onChange={e => updateSet(day.id, exIndex, setIndex, isTime ? 'duration' : 'reps', e.target.value)}
