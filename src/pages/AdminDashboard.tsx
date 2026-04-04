@@ -3,11 +3,11 @@ import { useAuth } from '../contexts/AuthContext';
 import type { UserProfile, Routine } from '../lib/types';
 import { useMockBackendStore } from '../lib/mockBackend';
 import { useTrainerStore } from '../lib/store';
-import { Users, BookOpen, Settings, LogOut, Plus, User as UserIcon, ArrowLeft, Activity, Calendar, X, Dices, Dumbbell, Pencil, Search, Trash2, CheckCircle } from 'lucide-react';
+import { Users, BookOpen, Settings, LogOut, Plus, User as UserIcon, ArrowLeft, Activity, Calendar, X, Dices, Dumbbell, Pencil, Search, Trash2, CheckCircle, FolderOpen, Copy } from 'lucide-react';
 
 export default function AdminDashboard() {
     const { user, logout, switchViewMode } = useAuth();
-    const [activeTab, setActiveTab] = useState<'clients' | 'trainers' | 'library' | 'settings'>('clients');
+    const [activeTab, setActiveTab] = useState<'clients' | 'trainers' | 'programs' | 'library' | 'settings'>('clients');
     const [selectedClient, setSelectedClient] = useState<UserProfile | null>(null);
     const [isAddingClient, setIsAddingClient] = useState(false);
     const [editingTrainer, setEditingTrainer] = useState<UserProfile | null>(null);
@@ -37,10 +37,23 @@ export default function AdminDashboard() {
     const deleteGlobalExercise = useMockBackendStore(state => state.deleteGlobalExercise);
     const { exercises: clientExercises } = useTrainerStore();
 
+    const trainerRoutines = useMockBackendStore(state => state.trainerRoutines);
+    const addTrainerRoutine = useMockBackendStore(state => state.addTrainerRoutine);
+    const deleteTrainerRoutine = useMockBackendStore(state => state.deleteTrainerRoutine);
+    const duplicateTrainerRoutine = useMockBackendStore(state => state.duplicateTrainerRoutine);
+    const assignTrainerRoutineToClient = useMockBackendStore(state => state.assignTrainerRoutineToClient);
+
     const physioEvaluations = useMockBackendStore(state => state.physioEvaluations);
     const physioSessionNotes = useMockBackendStore(state => state.physioSessionNotes);
     const savePhysioEvaluation = useMockBackendStore(state => state.savePhysioEvaluation);
     const addPhysioSessionNote = useMockBackendStore(state => state.addPhysioSessionNote);
+
+    // Programs State
+    const [progSearch, setProgSearch] = useState('');
+    const [progFilter, setProgFilter] = useState<'all' | 'template' | 'client-specific'>('all');
+    const [isAddingProgram, setIsAddingProgram] = useState(false);
+    const [progForm, setProgForm] = useState({ name: '', description: '', scope: 'template' as 'template' | 'client-specific', assignedTo: '' });
+    const [selectedProgramToAssign, setSelectedProgramToAssign] = useState<string | null>(null);
 
     // Library State
     const [libSearch, setLibSearch] = useState('');
@@ -178,6 +191,13 @@ export default function AdminDashboard() {
                             <span className="font-medium">My Staff</span>
                         </button>
                     )}
+                    <button
+                        onClick={() => { setActiveTab('programs'); setSelectedClient(null); }}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-left ${activeTab === 'programs' ? 'bg-red-600 text-white font-medium shadow-lg shadow-red-600/20' : 'text-zinc-400 hover:text-white hover:bg-white/5'}`}
+                    >
+                        <FolderOpen size={20} />
+                        <span className="font-medium">Programs</span>
+                    </button>
                     <button
                         onClick={() => { setActiveTab('library'); setSelectedClient(null); }}
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-left ${activeTab === 'library' ? 'bg-red-600 text-white font-medium shadow-lg shadow-red-600/20' : 'text-zinc-400 hover:text-white hover:bg-white/5'}`}
@@ -567,6 +587,209 @@ export default function AdminDashboard() {
                     </div>
                 )}
                 
+                {activeTab === 'programs' && (
+                    <div className="max-w-5xl mx-auto space-y-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <h2 className="text-3xl font-bold tracking-tight mb-1">Programs</h2>
+                                <p className="text-zinc-400 text-sm">Create templates, manage client-specific routines, and assign them.</p>
+                            </div>
+                            <button
+                                onClick={() => setIsAddingProgram(true)}
+                                className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 rounded-full font-bold transition-colors shadow-[0_0_20px_rgba(220,38,38,0.3)]"
+                            >
+                                <Plus size={18} /> New Program
+                            </button>
+                        </div>
+
+                        {/* Search + Filter */}
+                        <div className="flex gap-3">
+                            <div className="relative flex-1">
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
+                                <input
+                                    type="text"
+                                    placeholder="Search programs..."
+                                    value={progSearch}
+                                    onChange={e => setProgSearch(e.target.value)}
+                                    className="w-full bg-zinc-900 border border-white/10 rounded-xl py-2.5 pl-10 pr-4 text-white text-sm placeholder:text-zinc-600 focus:outline-none focus:border-red-500/50"
+                                />
+                            </div>
+                            <div className="flex bg-zinc-900 p-1 rounded-xl border border-white/10">
+                                {(['all', 'template', 'client-specific'] as const).map(f => (
+                                    <button
+                                        key={f}
+                                        onClick={() => setProgFilter(f)}
+                                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all capitalize ${
+                                            progFilter === f ? 'bg-zinc-800 text-white' : 'text-zinc-500 hover:text-zinc-300'
+                                        }`}
+                                    >{f === 'client-specific' ? 'Client Specific' : f}</button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Add Program Form */}
+                        {isAddingProgram && (
+                            <div className="bg-zinc-900 border border-red-500/30 rounded-2xl p-6 space-y-4">
+                                <h3 className="font-bold text-white">Create New Program</h3>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <input
+                                        type="text" placeholder="Program Name *" value={progForm.name}
+                                        onChange={e => setProgForm(s => ({ ...s, name: e.target.value }))}
+                                        className="bg-zinc-800 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-red-500/50"
+                                    />
+                                    <select
+                                        value={progForm.scope}
+                                        onChange={e => setProgForm(s => ({ ...s, scope: e.target.value as 'template' | 'client-specific' }))}
+                                        className="bg-zinc-800 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-red-500/50"
+                                    >
+                                        <option value="template">Template (Reusable)</option>
+                                        <option value="client-specific">Client-Specific</option>
+                                    </select>
+                                    <input
+                                        type="text" placeholder="Description (Optional)" value={progForm.description}
+                                        onChange={e => setProgForm(s => ({ ...s, description: e.target.value }))}
+                                        className="col-span-2 bg-zinc-800 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-red-500/50"
+                                    />
+                                    {progForm.scope === 'client-specific' && (
+                                        <select
+                                            value={progForm.assignedTo}
+                                            onChange={e => setProgForm(s => ({ ...s, assignedTo: e.target.value }))}
+                                            className="col-span-2 bg-zinc-800 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-red-500/50"
+                                        >
+                                            <option value="">Select a Client To Build For</option>
+                                            {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                        </select>
+                                    )}
+                                </div>
+                                <div className="flex gap-2">
+                                    <button 
+                                        onClick={() => {
+                                            if (!progForm.name.trim() || !user) return;
+                                            if (progForm.scope === 'client-specific' && !progForm.assignedTo) return;
+                                            addTrainerRoutine({
+                                                name: progForm.name.trim(),
+                                                description: progForm.description.trim(),
+                                                scope: progForm.scope,
+                                                assignedTo: progForm.scope === 'client-specific' ? progForm.assignedTo : undefined,
+                                                trainerId: user.id,
+                                                days: []
+                                            });
+                                            setIsAddingProgram(false);
+                                            setProgForm({ name: '', description: '', scope: 'template', assignedTo: '' });
+                                        }} 
+                                        className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-bold transition-colors"
+                                    >Save Draft Program</button>
+                                    <button onClick={() => setIsAddingProgram(false)} className="px-5 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl text-sm font-medium transition-colors">Cancel</button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* List Programs */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {trainerRoutines
+                                .filter(r => (progFilter === 'all' || r.scope === progFilter) && (!progSearch || r.name.toLowerCase().includes(progSearch.toLowerCase())))
+                                .map(routine => {
+                                    const assignedClientInfo = clients.find(c => c.id === routine.assignedTo);
+                                    
+                                    return (
+                                        <div key={routine.id} className="bg-zinc-900 border border-white/10 p-5 rounded-2xl group hover:border-red-500/30 transition-all flex flex-col justify-between">
+                                            <div>
+                                                <div className="flex items-start justify-between mb-2">
+                                                    <h3 className="text-lg font-bold text-white leading-tight">{routine.name}</h3>
+                                                    <span className={`text-[9px] uppercase font-black tracking-wider px-2 py-1 rounded border ${routine.scope === 'template' ? 'text-zinc-400 border-white/10' : 'text-red-400 border-red-500/20 bg-red-500/10'}`}>
+                                                        {routine.scope}
+                                                    </span>
+                                                </div>
+                                                <p className="text-zinc-400 text-xs mb-4 line-clamp-2">{routine.description || "No description provided."}</p>
+                                                {routine.scope === 'client-specific' && assignedClientInfo && (
+                                                    <div className="flex items-center gap-2 mb-4 bg-black/40 border border-white/5 rounded-lg px-3 py-1.5 w-fit">
+                                                        <UserIcon size={12} className="text-zinc-500" />
+                                                        <span className="text-xs text-zinc-300">{assignedClientInfo.name}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            <div className="flex items-center justify-between pt-4 border-t border-white/5">
+                                                <div className="flex gap-2">
+                                                    <button 
+                                                        disabled
+                                                        title="Builder coming soon..."
+                                                        className="p-2 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors cursor-not-allowed"
+                                                    >
+                                                        <Pencil size={18} />
+                                                    </button>
+                                                    {user && (
+                                                        <button 
+                                                            onClick={() => duplicateTrainerRoutine(routine.id, user.id)}
+                                                            title="Duplicate Program"
+                                                            className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
+                                                        >
+                                                            <Copy size={18} />
+                                                        </button>
+                                                    )}
+                                                    <button 
+                                                        onClick={() => deleteTrainerRoutine(routine.id)}
+                                                        title="Delete Program"
+                                                        className="p-2 text-red-500/50 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                                                    >
+                                                        <Trash2 size={18} />
+                                                    </button>
+                                                </div>
+                                                
+                                                <button 
+                                                    onClick={() => {
+                                                        if (routine.scope === 'client-specific' && routine.assignedTo) {
+                                                            assignTrainerRoutineToClient(routine.id, routine.assignedTo);
+                                                            alert('Assigned directly to ' + assignedClientInfo?.name);
+                                                        } else {
+                                                            setSelectedProgramToAssign(routine.id);
+                                                        }
+                                                    }}
+                                                    className="text-xs font-bold bg-white text-black px-3 py-1.5 rounded-lg hover:bg-zinc-200 transition-colors"
+                                                >
+                                                    {routine.scope === 'client-specific' ? 'Push to App' : 'Assign'}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )
+                                })
+                            }
+                            {trainerRoutines.length === 0 && !isAddingProgram && (
+                                <div className="col-span-2 py-16 text-center border-2 border-dashed border-white/5 rounded-2xl">
+                                    <FolderOpen size={40} className="mx-auto text-zinc-600 mb-3" />
+                                    <p className="text-zinc-500 text-sm">You haven't built any programs yet.</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {/* Assignment Modal */}
+                {selectedProgramToAssign && (
+                    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-6">
+                        <div className="bg-zinc-950 border border-white/10 p-8 rounded-3xl w-full max-w-sm shadow-2xl relative">
+                             <button onClick={() => setSelectedProgramToAssign(null)} className="absolute top-6 right-6 text-zinc-500"><X size={20}/></button>
+                             <h3 className="text-xl font-bold mb-4">Assign Template</h3>
+                             <p className="text-sm text-zinc-400 mb-6">Select a client to push this program to their training app.</p>
+                             <div className="space-y-2 max-h-60 overflow-y-auto">
+                                {clients.map(c => (
+                                    <button 
+                                        key={c.id} 
+                                        onClick={() => {
+                                            assignTrainerRoutineToClient(selectedProgramToAssign, c.id);
+                                            setSelectedProgramToAssign(null);
+                                        }}
+                                        className="w-full text-left px-4 py-3 bg-zinc-900 hover:bg-zinc-800 rounded-xl transition-colors border border-transparent hover:border-red-500/30"
+                                    >
+                                        <p className="font-bold">{c.name}</p>
+                                        <p className="text-xs text-zinc-500">{c.email}</p>
+                                    </button>
+                                ))}
+                             </div>
+                        </div>
+                    </div>
+                )}
+
                 {activeTab === 'library' && (
                     <div className="max-w-5xl mx-auto space-y-6">
                         <div className="flex items-center justify-between">

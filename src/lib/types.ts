@@ -82,6 +82,21 @@ export type Routine = {
     authorId?: string; // Who created it (trainer vs client)
 };
 
+// Trainer-managed routine: can be a reusable template or a client-specific plan
+export type TrainerRoutine = {
+    id: string;
+    name: string;
+    description?: string;
+    scope: 'template' | 'client-specific'; // template = reusable, client-specific = one client
+    assignedTo?: string; // clientId if client-specific
+    trainerId: string;
+    days: WorkoutDay[];
+    createdAt: number;
+    lastModified: number;
+    tags?: string[]; // e.g. 'hypertrophy', 'strength', 'rehab'
+};
+
+
 // The "AI" Prediction Result
 export type Prediction = {
     exerciseId: string;

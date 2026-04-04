@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { UserProfile, Routine, WorkoutSet, SessionPackage, SessionLog, ClientType, PhysioEvaluation, PhysioSessionNote, Exercise } from "./types";
+import type { UserProfile, Routine, WorkoutSet, SessionPackage, SessionLog, ClientType, PhysioEvaluation, PhysioSessionNote, Exercise, TrainerRoutine } from "./types";
 
 interface MockBackendState {
     users: UserProfile[];
@@ -29,6 +29,15 @@ interface MockBackendState {
     addGlobalExercise: (ex: Omit<Exercise, 'id' | 'scope'>, adminId: string) => Exercise;
     updateGlobalExercise: (id: string, updates: Partial<Exercise>) => void;
     deleteGlobalExercise: (id: string) => void;
+
+    // Trainer Routines: templates + client-specific
+    trainerRoutines: TrainerRoutine[];
+    addTrainerRoutine: (routine: Omit<TrainerRoutine, 'id' | 'createdAt' | 'lastModified'>) => TrainerRoutine;
+    updateTrainerRoutine: (id: string, updates: Partial<TrainerRoutine>) => void;
+    deleteTrainerRoutine: (id: string) => void;
+    duplicateTrainerRoutine: (id: string, trainerId: string) => TrainerRoutine;
+    // Assign a template or client-specific routine to a client's active workout store
+    assignTrainerRoutineToClient: (routineId: string, clientId: string) => void;
 
     // ── SESSION SYSTEM ────────────────────────────────────────────────────────
     sessionPackages: SessionPackage[];
@@ -80,6 +89,7 @@ export const useMockBackendStore = create<MockBackendState>()(
             historyByUserId: {},
             customExercises: [],
             globalExercises: [],
+            trainerRoutines: [],
             sessionPackages: [],
             sessionLogs: [],
             usedNonces: [],
@@ -154,6 +164,72 @@ export const useMockBackendStore = create<MockBackendState>()(
             deleteGlobalExercise: (id) => set(state => ({
                 globalExercises: state.globalExercises.filter(e => e.id !== id)
             })),
+
+            // ── TRAINER ROUTINES ─────────────────────────────────────────────
+
+            addTrainerRoutine: (routine) => {
+                const newRoutine: TrainerRoutine = {
+                    ...routine,
+                    id: `tr_${Date.now().toString(36)}`,
+                    createdAt: Date.now(),
+                    lastModified: Date.now(),
+                };
+                set(state => ({ trainerRoutines: [...state.trainerRoutines, newRoutine] }));
+                return newRoutine;
+            },
+
+            updateTrainerRoutine: (id, updates) => set(state => ({
+                trainerRoutines: state.trainerRoutines.map(r =>
+                    r.id === id ? { ...r, ...updates, lastModified: Date.now() } : r
+                )
+            })),
+
+            deleteTrainerRoutine: (id) => set(state => ({
+                trainerRoutines: state.trainerRoutines.filter(r => r.id !== id)
+            })),
+
+            duplicateTrainerRoutine: (id, trainerId) => {
+                const state = get();
+                const original = state.trainerRoutines.find(r => r.id === id);
+                if (!original) throw new Error('Routine not found');
+                const copy: TrainerRoutine = {
+                    ...original,
+                    id: `tr_${Date.now().toString(36)}`,
+                    name: `${original.name} (Copy)`,
+                    trainerId,
+                    assignedTo: undefined, // copies are unassigned by default
+                    scope: 'template', // copies start as templates
+                    createdAt: Date.now(),
+                    lastModified: Date.now(),
+                };
+                set(state => ({ trainerRoutines: [...state.trainerRoutines, copy] }));
+                return copy;
+            },
+
+            assignTrainerRoutineToClient: (routineId, clientId) => {
+                const state = get();
+                const tr = state.trainerRoutines.find(r => r.id === routineId);
+                if (!tr) return;
+                // Build a Routine compatible with the client's store
+                const clientRoutine: Routine = {
+                    id: `assigned_${routineId}_${clientId}_${Date.now().toString(36)}`,
+                    name: tr.name,
+                    description: tr.description,
+                    rationale: `Assigned by trainer.`,
+                    days: tr.days,
+                    currentDayIndex: 0,
+                    startDate: Date.now(),
+                    lastModified: Date.now(),
+                    authorId: tr.trainerId,
+                };
+                const clientRoutines = state.routinesByUserId[clientId] || [];
+                set(st => ({
+                    routinesByUserId: {
+                        ...st.routinesByUserId,
+                        [clientId]: [...clientRoutines, clientRoutine]
+                    }
+                }));
+            },
 
             assignRoutineToClient: (clientId, routine) => set((state) => {
                 const clientRoutines = state.routinesByUserId[clientId] || [];
