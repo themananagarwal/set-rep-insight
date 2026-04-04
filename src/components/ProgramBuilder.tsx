@@ -18,6 +18,7 @@ export function ProgramBuilder({ routine: initialRoutine, onClose }: Props) {
     // Local state for editing the routine
     const [routine, setRoutine] = useState<TrainerRoutine>(initialRoutine);
     const [showPickerForDay, setShowPickerForDay] = useState<string | null>(null);
+    const [dayToDelete, setDayToDelete] = useState<string | null>(null);
 
     // Provide the combined library to display exercise full names
     const adminLibrary = useMemo(() => {
@@ -41,9 +42,10 @@ export function ProgramBuilder({ routine: initialRoutine, onClose }: Props) {
         }));
     };
 
-    const removeDay = (dayId: string) => {
-        if (!confirm('Remove this entire day?')) return;
-        setRoutine(r => ({ ...r, days: r.days.filter(d => d.id !== dayId) }));
+    const removeDay = () => {
+        if (!dayToDelete) return;
+        setRoutine(r => ({ ...r, days: r.days.filter(d => d.id !== dayToDelete) }));
+        setDayToDelete(null);
     };
 
     const updateDayName = (dayId: string, name: string) => {
@@ -139,7 +141,7 @@ export function ProgramBuilder({ routine: initialRoutine, onClose }: Props) {
                                 placeholder="E.g., Pull Day"
                             />
                             <button 
-                                onClick={() => removeDay(day.id)}
+                                onClick={() => setDayToDelete(day.id)}
                                 className="text-red-400 p-2 hover:bg-red-500/10 rounded-lg transition-colors ml-4"
                             ><Trash2 size={18} /></button>
                         </div>
@@ -230,24 +232,48 @@ export function ProgramBuilder({ routine: initialRoutine, onClose }: Props) {
                     <ExercisePicker 
                         onSelect={(ex: any) => {
                             setRoutine(r => {
-                                const newD = [...r.days];
-                                const dIdx = newD.findIndex(d => d.id === showPickerForDay);
-                                if (dIdx === -1) return r;
                                 const isTime = ex.trackingType === 'time';
-                                newD[dIdx].exercises.push({
+                                const newExercise = {
                                     exerciseId: ex.id,
                                     targetSets: 3,
                                     targetReps: isTime ? 0 : 10,
                                     sets: [
-                                        { id: crypto.randomUUID(), type: 'working', reps: isTime ? '0' : '10', duration: isTime ? 60 : undefined },
+                                        { id: crypto.randomUUID(), type: 'working' as const, reps: isTime ? '0' : '10', duration: isTime ? 60 : undefined },
                                     ]
-                                });
-                                return { ...r, days: newD };
+                                };
+                                return {
+                                    ...r,
+                                    days: r.days.map(d => 
+                                        d.id === showPickerForDay 
+                                            ? { ...d, exercises: [...d.exercises, newExercise] }
+                                            : d
+                                    )
+                                };
                             });
                             setShowPickerForDay(null);
                         }}
                         onBack={() => setShowPickerForDay(null)}
                     />
+                </div>
+            )}
+
+            {/* In-App Delete Confirmation Modal */}
+            {dayToDelete && (
+                <div className="fixed inset-0 z-[110] bg-black/80 backdrop-blur-sm flex items-center justify-center p-6">
+                    <div className="bg-zinc-900 border border-white/10 rounded-2xl p-6 max-w-sm w-full shadow-2xl">
+                        <h3 className="text-xl font-bold text-white mb-2">Delete Workout Day?</h3>
+                        <p className="text-zinc-400 text-sm mb-6">Are you sure you want to remove this day? All exercises and sets inside it will be lost.</p>
+                        <div className="flex gap-3">
+                            <button 
+                                onClick={removeDay}
+                                className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2.5 rounded-xl font-bold transition-colors"
+                            >Delete</button>
+                            <button 
+                                onClick={() => setDayToDelete(null)}
+                                className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white py-2.5 rounded-xl font-bold transition-colors"
+                            >Cancel</button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>
