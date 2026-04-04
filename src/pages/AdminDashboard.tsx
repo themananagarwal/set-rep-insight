@@ -152,6 +152,12 @@ export default function AdminDashboard() {
         // handleAssignMockRoutine removed in favor of precise trainer template assignment
 
 
+    const clientAlreadyHasProgram = (clientId: string, trainerRoutineId: string) => {
+        const tr = trainerRoutines.find(r => r.id === trainerRoutineId);
+        if (!tr) return false;
+        return (clientRoutines[clientId] || []).some(r => r.name === tr.name);
+    };
+
     if (!user || user.role !== 'admin') {
         return <div className="p-8 text-white">Access Denied: Admins Only</div>;
     }
@@ -778,19 +784,32 @@ export default function AdminDashboard() {
                              <h3 className="text-xl font-bold mb-4">Assign Template</h3>
                              <p className="text-sm text-zinc-400 mb-6">Select a client to push this program to their training app.</p>
                              <div className="space-y-2 max-h-60 overflow-y-auto">
-                                {clients.map(c => (
-                                    <button 
-                                        key={c.id} 
-                                        onClick={() => {
-                                            assignTrainerRoutineToClient(selectedProgramToAssign, c.id);
-                                            setSelectedProgramToAssign(null);
-                                        }}
-                                        className="w-full text-left px-4 py-3 bg-zinc-900 hover:bg-zinc-800 rounded-xl transition-colors border border-transparent hover:border-red-500/30"
-                                    >
-                                        <p className="font-bold">{c.name}</p>
-                                        <p className="text-xs text-zinc-500">{c.email}</p>
-                                    </button>
-                                ))}
+                                {clients.map(c => {
+                                    const isAssigned = clientAlreadyHasProgram(c.id, selectedProgramToAssign);
+                                    return (
+                                        <button 
+                                            key={c.id} 
+                                            disabled={isAssigned}
+                                            onClick={() => {
+                                                assignTrainerRoutineToClient(selectedProgramToAssign, c.id);
+                                                setSelectedProgramToAssign(null);
+                                            }}
+                                            className={`w-full text-left px-4 py-3 rounded-xl transition-colors border ${
+                                                isAssigned 
+                                                    ? 'bg-zinc-900 border-white/5 opacity-50 cursor-not-allowed' 
+                                                    : 'bg-zinc-900 hover:bg-zinc-800 border-transparent hover:border-red-500/30'
+                                            }`}
+                                        >
+                                            <div className="flex justify-between items-center">
+                                                <div>
+                                                    <p className="font-bold">{c.name}</p>
+                                                    <p className="text-xs text-zinc-500">{c.email}</p>
+                                                </div>
+                                                {isAssigned && <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider bg-zinc-800 px-2 py-1 rounded">Assigned</span>}
+                                            </div>
+                                        </button>
+                                    );
+                                })}
                              </div>
                         </div>
                     </div>
@@ -1078,19 +1097,30 @@ export default function AdminDashboard() {
                             {trainerRoutines.length === 0 ? (
                                 <p className="text-zinc-500 text-sm text-center py-4">No programs built yet. Go to Programs tab first.</p>
                             ) : (
-                                trainerRoutines.map(tr => (
-                                    <button 
-                                        key={tr.id} 
-                                        onClick={() => {
-                                            assignTrainerRoutineToClient(tr.id, assigningToClient);
-                                            setAssigningToClient(null);
-                                        }}
-                                        className="w-full flex items-center justify-between text-left px-4 py-3 bg-zinc-900 border border-white/5 hover:bg-zinc-800 hover:border-red-500/30 rounded-xl transition-colors"
-                                    >
-                                        <p className="font-bold">{tr.name}</p>
-                                        <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">{tr.days.length} Days</span>
-                                    </button>
-                                ))
+                                trainerRoutines.map(tr => {
+                                    const isAssigned = assigningToClient ? clientAlreadyHasProgram(assigningToClient, tr.id) : false;
+                                    return (
+                                        <button 
+                                            key={tr.id} 
+                                            disabled={isAssigned}
+                                            onClick={() => {
+                                                if (!assigningToClient) return;
+                                                assignTrainerRoutineToClient(tr.id, assigningToClient);
+                                                setAssigningToClient(null);
+                                            }}
+                                            className={`w-full flex items-center justify-between text-left px-4 py-3 border rounded-xl transition-colors ${
+                                                isAssigned 
+                                                    ? 'bg-zinc-900/50 border-white/5 opacity-50 cursor-not-allowed'
+                                                    : 'bg-zinc-900 border-white/5 hover:bg-zinc-800 hover:border-red-500/30'
+                                            }`}
+                                        >
+                                            <p className="font-bold">{tr.name}</p>
+                                            <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">
+                                                {isAssigned ? 'Assigned' : `${tr.days.length} Days`}
+                                            </span>
+                                        </button>
+                                    );
+                                })
                             )}
                          </div>
                     </div>
