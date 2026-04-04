@@ -57,6 +57,7 @@ export default function AdminDashboard() {
     const [selectedProgramToAssign, setSelectedProgramToAssign] = useState<string | null>(null);
     const [assigningToClient, setAssigningToClient] = useState<string | null>(null);
     const [clientRoutineToDelete, setClientRoutineToDelete] = useState<{ clientId: string; routineId: string } | null>(null);
+    const [clientToRemove, setClientToRemove] = useState<UserProfile | null>(null);
     const [editingRoutine, setEditingRoutine] = useState<import('../lib/types').TrainerRoutine | null>(null);
 
     // Library State
@@ -320,15 +321,25 @@ export default function AdminDashboard() {
                                     <p className="text-zinc-400">{selectedClient.email}</p>
                                 </div>
                             </div>
-                            <div className="flex gap-4 text-center">
-                                <div className="bg-zinc-900 px-6 py-3 rounded-2xl">
-                                    <p className="text-zinc-500 text-sm mb-1 font-medium">Goal</p>
-                                    <p className="text-xl font-bold text-white capitalize">{selectedClient.goal || "None"}</p>
+                            <div className="flex items-center gap-6">
+                                <div className="flex gap-4 text-center">
+                                    <div className="bg-zinc-900 px-6 py-3 rounded-2xl">
+                                        <p className="text-zinc-500 text-sm mb-1 font-medium">Goal</p>
+                                        <p className="text-xl font-bold text-white capitalize">{selectedClient.goal || "None"}</p>
+                                    </div>
+                                    <div className="bg-zinc-900 px-6 py-3 rounded-2xl">
+                                        <p className="text-zinc-500 text-sm mb-1 font-medium">Weight</p>
+                                        <p className="text-xl font-bold text-white">{selectedClient.weight ? `${selectedClient.weight}kg` : "N/A"}</p>
+                                    </div>
                                 </div>
-                                <div className="bg-zinc-900 px-6 py-3 rounded-2xl">
-                                    <p className="text-zinc-500 text-sm mb-1 font-medium">Weight</p>
-                                    <p className="text-xl font-bold text-white">{selectedClient.weight ? `${selectedClient.weight}kg` : "N/A"}</p>
-                                </div>
+                                <div className="w-px h-12 bg-white/10 hidden md:block"></div>
+                                <button 
+                                    onClick={() => setClientToRemove(selectedClient)}
+                                    className="p-4 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-2xl transition-colors"
+                                    title="Remove Client from Roster"
+                                >
+                                    <Trash2 size={20} />
+                                </button>
                             </div>
                         </div>
 
@@ -1143,6 +1154,33 @@ export default function AdminDashboard() {
                             >Remove</button>
                             <button 
                                 onClick={() => setClientRoutineToDelete(null)}
+                                className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white py-2.5 rounded-xl font-bold transition-colors"
+                            >Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* In-App Remove Client Modal */}
+            {clientToRemove && (
+                <div className="fixed inset-0 z-[120] bg-black/80 backdrop-blur-sm flex items-center justify-center p-6">
+                    <div className="bg-zinc-900 border border-white/10 rounded-2xl p-6 max-w-sm w-full shadow-2xl">
+                        <div className="w-12 h-12 bg-red-500/10 rounded-full flex items-center justify-center text-red-500 mx-auto mb-4">
+                            <Trash2 size={24} />
+                        </div>
+                        <h3 className="text-xl font-bold text-white mb-2 text-center">Remove Client?</h3>
+                        <p className="text-zinc-400 text-sm mb-6 text-center">Are you sure you want to permanently remove <strong className="text-white">{clientToRemove.name}</strong> from your roster? This action cannot be undone and will revoke their app access.</p>
+                        <div className="flex gap-3">
+                            <button 
+                                onClick={() => {
+                                    deleteUser(clientToRemove.id);
+                                    if (selectedClient?.id === clientToRemove.id) setSelectedClient(null);
+                                    setClientToRemove(null);
+                                }}
+                                className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2.5 rounded-xl font-bold transition-colors"
+                            >Remove Client</button>
+                            <button 
+                                onClick={() => setClientToRemove(null)}
                                 className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white py-2.5 rounded-xl font-bold transition-colors"
                             >Cancel</button>
                         </div>
