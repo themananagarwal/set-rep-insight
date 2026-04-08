@@ -8,9 +8,9 @@ interface MockBackendState {
     historyByUserId: Record<string, WorkoutSet[]>;
 
     // Actions
-    addUser: (user: Omit<UserProfile, "id">) => UserProfile;
+    addUser: (user: Omit<UserProfile, "id">) => Promise<UserProfile>;
     updateUser: (id: string, updates: Partial<UserProfile>) => void;
-    deleteUser: (id: string) => void;
+    deleteUser: (id: string) => Promise<void>;
     resetClientPassword: (email: string, newPass: string) => boolean;
 
     // Sync actions
@@ -19,7 +19,7 @@ interface MockBackendState {
     // Admin specific
     getClientsForTrainer: (trainerId: string) => UserProfile[];
     assignRoutineToClient: (clientId: string, routine: Routine) => void;
-    removeRoutineFromClient: (clientId: string, routineId: string) => void;
+    removeRoutineFromClient: (clientId: string, routineId: string) => Promise<void>;
 
     // Custom exercises (legacy, kept for compat)
     customExercises: Array<{ id: string; name: string; primaryAxis: string; trackingType: 'reps' | 'time'; trainerId: string }>;
@@ -38,7 +38,7 @@ interface MockBackendState {
     deleteTrainerRoutine: (id: string) => void;
     duplicateTrainerRoutine: (id: string, trainerId: string) => TrainerRoutine;
     // Assign a template or client-specific routine to a client's active workout store
-    assignTrainerRoutineToClient: (routineId: string, clientId: string) => void;
+    assignTrainerRoutineToClient: (routineId: string, clientId: string) => Promise<void>;
 
     // ── SESSION SYSTEM ────────────────────────────────────────────────────────
     sessionPackages: SessionPackage[];
@@ -98,8 +98,20 @@ export const useMockBackendStore = create<MockBackendState>()(
             physioEvaluations: {},
             physioSessionNotes: [],
 
-            addUser: (userData) => {
-                const newUser: UserProfile = { ...userData, id: crypto.randomUUID() };
+            addUser: async (userData) => {
+                const res = await fetch("/api/clients/provision", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(userData)
+                });
+                
+                const data = await res.json();
+                
+                // Keep local state in sync assuming we provisioned someone successfully, 
+                // but use their specific ID if returned
+                const newId = data.user?.id || crypto.randomUUID();
+                const newUser: UserProfile = { ...userData, id: newId };
+                
                 set((state) => ({
                     users: [...state.users, newUser],
                     routinesByUserId: { ...state.routinesByUserId, [newUser.id]: [] },
@@ -122,17 +134,25 @@ export const useMockBackendStore = create<MockBackendState>()(
                 return false;
             },
 
-            deleteUser: (id) => set((state) => {
-                const newRoutines = { ...state.routinesByUserId };
-                delete newRoutines[id];
-                const newHistory = { ...state.historyByUserId };
-                delete newHistory[id];
-                return {
-                    users: state.users.filter(u => u.id !== id),
-                    routinesByUserId: newRoutines,
-                    historyByUserId: newHistory,
-                };
-            }),
+            deleteUser: async (id) => {
+                try {
+                    await fetch(`/api/clients/${id}`, { method: "DELETE" });
+                } catch (e) {
+                    console.error("Backend failed, attempting UI local removal fallback", e);
+                }
+
+                set((state) => {
+                    const newRoutines = { ...state.routinesByUserId };
+                    delete newRoutines[id];
+                    const newHistory = { ...state.historyByUserId };
+                    delete newHistory[id];
+                    return {
+                        users: state.users.filter(u => u.id !== id),
+                        routinesByUserId: newRoutines,
+                        historyByUserId: newHistory,
+                    };
+                });
+            },
 
             syncUserData: (userId, routines, history) => set((state) => ({
                 routinesByUserId: { ...state.routinesByUserId, [userId]: routines },
@@ -207,29 +227,49 @@ export const useMockBackendStore = create<MockBackendState>()(
                 return copy;
             },
 
-            assignTrainerRoutineToClient: (routineId, clientId) => {
+            assignTrainerRoutineToClient: async (routineId, clientId) => {
                 const state = get();
                 const tr = state.trainerRoutines.find(r => r.id === routineId);
                 if (!tr) return;
-                // Build a Routine compatible with the client's store
-                const clientRoutine: Routine = {
-                    id: `assigned_${routineId}_${clientId}_${Date.now().toString(36)}`,
-                    name: tr.name,
-                    description: tr.description,
-                    rationale: `Assigned by trainer.`,
-                    days: tr.days,
-                    currentDayIndex: 0,
-                    startDate: Date.now(),
-                    lastModified: Date.now(),
-                    authorId: tr.trainerId,
-                };
-                const clientRoutines = state.routinesByUserId[clientId] || [];
-                set(st => ({
-                    routinesByUserId: {
-                        ...st.routinesByUserId,
-                        [clientId]: [...clientRoutines, clientRoutine]
-                    }
-                }));
+
+                // Sync to backend securely using standard JSON
+                try {
+                    const res = await fetch("/api/routines/assign", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            clientId,
+                            trainerRoutineId: routineId,
+                            authorId: tr.trainerId,
+                            routine: tr,
+                        })
+                    });
+                    const resData = await res.json();
+                    
+                    // Build a Routine compatible with the client's store using Postgres ID or local Mock
+                    const assignedId = resData.success && resData.routine ? resData.routine.id : `assigned_${routineId}_${clientId}_${Date.now().toString(36)}`;
+                    
+                    const clientRoutine: Routine = {
+                        id: assignedId,
+                        name: tr.name,
+                        description: tr.description,
+                        rationale: `Assigned by trainer.`,
+                        days: tr.days,
+                        currentDayIndex: 0,
+                        startDate: Date.now(),
+                        lastModified: Date.now(),
+                        authorId: tr.trainerId,
+                    };
+                    const clientRoutines = state.routinesByUserId[clientId] || [];
+                    set(st => ({
+                        routinesByUserId: {
+                            ...st.routinesByUserId,
+                            [clientId]: [...clientRoutines, clientRoutine]
+                        }
+                    }));
+                } catch (e) {
+                    console.error("Failed to sync routine to backend");
+                }
             },
 
             assignRoutineToClient: (clientId, routine) => set((state) => {
@@ -238,10 +278,18 @@ export const useMockBackendStore = create<MockBackendState>()(
                 return { routinesByUserId: { ...state.routinesByUserId, [clientId]: [...clientRoutines, routine] } };
             }),
 
-            removeRoutineFromClient: (clientId, routineId) => set((state) => {
-                const clientRoutines = state.routinesByUserId[clientId] || [];
-                return { routinesByUserId: { ...state.routinesByUserId, [clientId]: clientRoutines.filter(r => r.id !== routineId) } };
-            }),
+            removeRoutineFromClient: async (clientId, routineId) => {
+                try {
+                    await fetch(`/api/routines/assign/${clientId}/${routineId}`, { method: "DELETE" });
+                } catch (e) {
+                    console.error("Failed to remove routine from backend", e);
+                }
+                
+                set((state) => {
+                    const clientRoutines = state.routinesByUserId[clientId] || [];
+                    return { routinesByUserId: { ...state.routinesByUserId, [clientId]: clientRoutines.filter(r => r.id !== routineId) } };
+                });
+            },
 
             // ── SESSION ACTIONS ───────────────────────────────────────────────
 
