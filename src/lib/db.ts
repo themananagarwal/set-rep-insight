@@ -8,7 +8,6 @@
  */
 
 import { supabase } from './supabase';
-import { createClient } from '@supabase/supabase-js';
 import type { UserProfile, Routine, WorkoutSet, SessionPackage, SessionLog } from './types';
 import type {
     DbProfile, DbRoutine, DbWorkoutSet,

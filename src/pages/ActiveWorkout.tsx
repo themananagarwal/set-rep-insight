@@ -410,7 +410,7 @@ export default function ActiveWorkout() {
                 <QRScanner 
                     clientId={authUser.id} 
                     onClose={() => setShowScannerModal(false)} 
-                    onSuccess={(trainerId) => {
+                    onSuccess={() => {
                         // After successful scan, complete the workout
                         setShowScannerModal(false);
                         completeWorkout();

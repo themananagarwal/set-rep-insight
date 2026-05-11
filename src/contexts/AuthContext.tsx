@@ -86,10 +86,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 // Inject a mock session package so the prototype can demonstrate the PT client workflow
                 useMockBackendStore.getState().upsertSessionPackage({
                     clientId: "admin-prototype",
+                    trainerId: "admin-prototype",
                     totalSessions: 10,
                     sessionsUsed: 2,
                     sessionsRemaining: 8,
-                    packageType: "monthly",
                 });
                 
                 setLoading(false);

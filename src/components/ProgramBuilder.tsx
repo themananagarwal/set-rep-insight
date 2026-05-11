@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
-import { ArrowLeft, Save, Trash2, Dumbbell, X, Plus, GripVertical } from 'lucide-react';
-import type { TrainerRoutine, WorkoutDay } from '../lib/types';
+import { ArrowLeft, Save, Trash2, Dumbbell, X, Plus } from 'lucide-react';
+import type { TrainerRoutine } from '../lib/types';
 import { useMockBackendStore } from '../lib/mockBackend';
 import { useTrainerStore } from '../lib/store';
 import AdminExercisePicker from './AdminExercisePicker';
