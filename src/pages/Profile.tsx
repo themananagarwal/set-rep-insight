@@ -1,9 +1,11 @@
 import { useTrainerStore } from "../lib/store";
 import { useAuth } from "../contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 import { analyzeWeaknesses, generateRoutine } from "../lib/generator";
-import { Activity, Trophy, Zap, Map, LogOut } from "lucide-react";
+import { Activity, Trophy, Zap, Map, LogOut, CreditCard } from "lucide-react";
 
 export default function Profile() {
+    const navigate = useNavigate();
     const { user: authUser, logout } = useAuth();
     const { user, history, exercises } = useTrainerStore();
     
@@ -31,13 +33,24 @@ export default function Profile() {
 
                         {/* Account Actions */}
             <div className="space-y-4">
-                <h2 className="text-xl font-bold text-white mb-2">Account Actions</h2>
+                <h2 className="text-xl font-bold text-white mb-2">Account & Billing</h2>
+                <button
+                    onClick={() => navigate('/sessions')}
+                    className="w-full py-4 bg-zinc-900 border border-white/5 text-white font-bold rounded-xl hover:bg-zinc-800 transition-colors flex items-center justify-between px-6"
+                >
+                    <div className="flex items-center gap-3">
+                        <CreditCard size={20} className="text-primary" />
+                        <span>My Packages & Sessions</span>
+                    </div>
+                </button>
                 <button
                     onClick={logout}
-                    className="w-full py-4 bg-zinc-900 text-white font-bold rounded-xl hover:bg-zinc-800 transition-colors flex items-center justify-center gap-2"
+                    className="w-full py-4 bg-zinc-900 border border-white/5 text-white font-bold rounded-xl hover:bg-zinc-800 transition-colors flex items-center justify-between px-6"
                 >
-                    <LogOut size={18} />
-                    <span>Sign Out</span>
+                    <div className="flex items-center gap-3">
+                        <LogOut size={20} className="text-red-500" />
+                        <span>Sign Out</span>
+                    </div>
                 </button>
             </div>
 

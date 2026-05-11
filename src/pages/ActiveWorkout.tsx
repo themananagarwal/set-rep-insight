@@ -5,6 +5,9 @@ import { Activity, CheckCircle, ChevronRight, StopCircle, Plus, Dumbbell, Zap, X
 import clsx from "clsx";
 import { format } from "date-fns";
 import ExercisePicker from "../components/ExercisePicker";
+import { useAuth } from "../contexts/AuthContext";
+import { useMockBackendStore } from "../lib/mockBackend";
+import { QRScanner } from "../components/QRScanner";
 
 export default function ActiveWorkout() {
     const navigate = useNavigate();
@@ -21,9 +24,15 @@ export default function ActiveWorkout() {
     } = useTrainerStore();
 
     const [showFinishModal, setShowFinishModal] = useState(false);
+    const [showScannerModal, setShowScannerModal] = useState(false);
     const [pickerOpen, setPickerOpen] = useState(false);
     const [showOTGInfo, setShowOTGInfo] = useState(false);
     const [dontShowAgain, setDontShowAgain] = useState(false);
+
+    const { user: authUser } = useAuth();
+    const getSessionPackage = useMockBackendStore(s => s.getSessionPackage);
+    const pkg = authUser ? getSessionPackage(authUser.id) : null;
+    const isPTClient = !!pkg && pkg.sessionsRemaining > 0;
 
     // decide if we should show info
     useEffect(() => {
@@ -91,6 +100,15 @@ export default function ActiveWorkout() {
     };
 
     const confirmFinish = () => {
+        setShowFinishModal(false);
+        if (isPTClient) {
+            setShowScannerModal(true);
+            return;
+        }
+        completeWorkout();
+    };
+
+    const completeWorkout = () => {
         if (isOnTheGo) {
             endOnTheGo();
         } else {
@@ -385,6 +403,19 @@ export default function ActiveWorkout() {
                         onBack={() => setPickerOpen(false)} 
                     />
                 </div>
+            )}
+
+            {/* QR Scanner Modal for PT Clients */}
+            {showScannerModal && authUser && (
+                <QRScanner 
+                    clientId={authUser.id} 
+                    onClose={() => setShowScannerModal(false)} 
+                    onSuccess={(trainerId) => {
+                        // After successful scan, complete the workout
+                        setShowScannerModal(false);
+                        completeWorkout();
+                    }}
+                />
             )}
         </div>
     );

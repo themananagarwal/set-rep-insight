@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useMockBackendStore } from '../lib/mockBackend';
-import { QRCodeDisplay } from '../components/QRCodeDisplay';
-import { QrCode, Clock, CheckCircle, AlertTriangle, Calendar, Shield } from 'lucide-react';
+import { QRScanner } from '../components/QRScanner';
+import { Camera, Clock, CheckCircle, AlertTriangle, Calendar, Shield } from 'lucide-react';
 import { format } from 'date-fns';
 
 export default function Sessions() {
     const { user } = useAuth();
-    const [showQR, setShowQR] = useState(false);
+    const [showScanner, setShowScanner] = useState(false);
 
     const getSessionPackage = useMockBackendStore(s => s.getSessionPackage);
     const getSessionLogs = useMockBackendStore(s => s.getSessionLogs);
@@ -78,21 +78,21 @@ export default function Sessions() {
                             <p className="text-zinc-500 text-xs">Ask your trainer to add a session package to your account.</p>
                         </div>
                     </div>
-                    <p className="text-xs text-zinc-600 border-t border-white/5 pt-3">You can still generate your QR code below — your trainer will see a notice to set up your package.</p>
+                    <p className="text-xs text-zinc-600 border-t border-white/5 pt-3">You can still scan a trainer's code, but no sessions can be deducted.</p>
                 </div>
             )}
 
-            {/* Show QR Button — always visible */}
+            {/* Show Scanner Button — always visible */}
             <button
-                onClick={() => setShowQR(true)}
+                onClick={() => setShowScanner(true)}
                 className={`w-full flex items-center justify-center gap-3 py-5 font-bold text-lg rounded-2xl transition-all active:scale-[0.98] ${
                     !pkg || isExpired || noSessions
                         ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-white/10'
                         : 'bg-red-600 hover:bg-red-700 text-white shadow-[0_0_30px_rgba(220,38,38,0.3)]'
                 }`}
             >
-                <QrCode size={24} />
-                {!pkg ? 'Generate QR Code' : isExpired ? 'Package Expired — Show QR Anyway' : noSessions ? 'No Sessions Left — Show QR Anyway' : 'Show Session QR'}
+                <Camera size={24} />
+                {!pkg ? 'Scan Trainer Code' : isExpired ? 'Package Expired — Scan Anyway' : noSessions ? 'No Sessions Left — Scan Anyway' : 'Scan Trainer QR'}
             </button>
 
             {/* Session History */}
@@ -119,19 +119,15 @@ export default function Sessions() {
                 </div>
             )}
 
-            {/* QR Full-screen Modal */}
-            {showQR && (
-                <div className="fixed inset-0 bg-black/95 backdrop-blur-sm z-50 flex flex-col">
-                    <div className="flex items-center justify-between p-5 border-b border-white/10">
-                        <h2 className="font-bold text-white">Session QR Code</h2>
-                        <button onClick={() => setShowQR(false)} className="text-zinc-400 hover:text-white p-2">
-                            ✕
-                        </button>
-                    </div>
-                    <div className="flex-1 overflow-auto flex items-center justify-center p-4">
-                        <QRCodeDisplay clientId={user.id} clientName={user.name} />
-                    </div>
-                </div>
+            {/* QR Scanner Modal */}
+            {showScanner && (
+                <QRScanner 
+                    clientId={user.id} 
+                    onClose={() => setShowScanner(false)} 
+                    onSuccess={(trainerId) => {
+                        // Let the state automatically update sessions and history
+                    }}
+                />
             )}
         </div>
     );

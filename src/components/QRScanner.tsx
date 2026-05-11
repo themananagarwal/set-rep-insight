@@ -8,9 +8,9 @@ import * as db from '../lib/db';
 const QR_MAX_AGE_MS = 120_000; // 2 minutes
 
 interface QRScannerProps {
-    trainerId: string;
+    clientId: string;
     onClose: () => void;
-    onSuccess?: (clientId: string) => void;
+    onSuccess?: (trainerId: string) => void;
 }
 
 interface ScanResult {
@@ -19,7 +19,7 @@ interface ScanResult {
     clientName?: string;
 }
 
-export function QRScanner({ trainerId, onClose, onSuccess }: QRScannerProps) {
+export function QRScanner({ clientId, onClose, onSuccess }: QRScannerProps) {
     const scannerRef = useRef<Html5Qrcode | null>(null);
     const scannerContainerId = 'qr-scanner-region';
     const [result, setResult] = useState<ScanResult | null>(null);
@@ -46,7 +46,7 @@ export function QRScanner({ trainerId, onClose, onSuccess }: QRScannerProps) {
 
         try {
             const payload = JSON.parse(decodedText);
-            const { clientId, timestamp, nonce } = payload;
+            const { trainerId, timestamp, nonce } = payload;
 
             // Validate age
             const age = Date.now() - timestamp;
@@ -57,9 +57,9 @@ export function QRScanner({ trainerId, onClose, onSuccess }: QRScannerProps) {
 
             if (isSupabaseConfigured) {
                 // ── Supabase path ──────────────────────────────────
-                const clientProfile = await db.getProfile(clientId);
-                if (!clientProfile) {
-                    setResult({ type: 'error', message: 'Client not found in system.' });
+                const trainerProfile = await db.getProfile(trainerId);
+                if (!trainerProfile) {
+                    setResult({ type: 'error', message: 'Trainer not found in system.' });
                     return;
                 }
                 const logResult = await db.logSession(clientId, trainerId, nonce, 'qr_scan');
@@ -67,13 +67,13 @@ export function QRScanner({ trainerId, onClose, onSuccess }: QRScannerProps) {
                     setResult({ type: 'error', message: logResult.error || 'Could not log session.' });
                     return;
                 }
-                setResult({ type: 'success', message: 'Session logged successfully!', clientName: clientProfile.name });
-                onSuccess?.(clientId);
+                setResult({ type: 'success', message: 'Session logged successfully!', clientName: trainerProfile.name });
+                onSuccess?.(trainerId);
             } else {
                 // ── Mock path ──────────────────────────────────────
-                const client = mockUsers.find(u => u.id === clientId);
-                if (!client) {
-                    setResult({ type: 'error', message: 'Client not found in system.' });
+                const trainer = mockUsers.find(u => u.id === trainerId);
+                if (!trainer) {
+                    setResult({ type: 'error', message: 'Trainer not found in system.' });
                     return;
                 }
                 const logResult = mockLogSession(clientId, trainerId, nonce, 'qr_scan');
@@ -81,8 +81,8 @@ export function QRScanner({ trainerId, onClose, onSuccess }: QRScannerProps) {
                     setResult({ type: 'error', message: logResult.error || 'Could not log session.' });
                     return;
                 }
-                setResult({ type: 'success', message: 'Session logged successfully!', clientName: client.name });
-                onSuccess?.(clientId);
+                setResult({ type: 'success', message: 'Session logged successfully!', clientName: trainer.name });
+                onSuccess?.(trainerId);
             }
         } catch {
             setResult({ type: 'error', message: 'Invalid QR code. Not a valid session QR.' });
@@ -112,7 +112,7 @@ export function QRScanner({ trainerId, onClose, onSuccess }: QRScannerProps) {
                 <div className="flex items-center justify-between p-6 border-b border-white/10">
                     <div className="flex items-center gap-2">
                         <Camera size={20} className="text-red-500" />
-                        <span className="font-bold text-white">Scan Client QR</span>
+                        <span className="font-bold text-white">Scan Trainer QR</span>
                     </div>
                     <button onClick={handleClose} className="text-zinc-500 hover:text-white transition-colors">
                         <X size={20} />
@@ -147,7 +147,7 @@ export function QRScanner({ trainerId, onClose, onSuccess }: QRScannerProps) {
                                 </div>
                                 <div>
                                     <h3 className="text-xl font-bold text-white mb-1">{result.message}</h3>
-                                    {result.clientName && <p className="text-zinc-400 text-sm">Client: <span className="font-semibold text-white">{result.clientName}</span></p>}
+                                    {result.clientName && <p className="text-zinc-400 text-sm">Trainer: <span className="font-semibold text-white">{result.clientName}</span></p>}
                                 </div>
                             </>
                         ) : (

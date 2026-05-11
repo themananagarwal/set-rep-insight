@@ -43,6 +43,8 @@ async function fetchProfileWithRetry(userId: string, retries = 4): Promise<UserP
 
 // ── Provider ───────────────────────────────────────────────────────────────
 
+const PROTOTYPE_MODE = true; // Instantly bypasses login for co-founder demo
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<UserProfile | null>(null);
     const [sessionData, setSessionData] = useState<any | null>(null);
@@ -65,6 +67,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // ── Session init ──────────────────────────────────────────────────────
     useEffect(() => {
         mounted.current = true;
+
+        if (PROTOTYPE_MODE) {
+            console.warn("⚠️ PROTOTYPE MODE: Auto-authenticating as Admin to bypass login!");
+            
+            // Wait for next tick so mockBackend is definitely initialized if there are circular deps
+            setTimeout(() => {
+                const mockAdmin: UserProfile = {
+                    id: "admin-prototype",
+                    email: "founder@ptapp.demo",
+                    name: "Lead Trainer",
+                    role: "admin",
+                };
+                setUser(mockAdmin);
+                trainerStore.setUser(mockAdmin);
+                setViewMode('admin');
+
+                // Inject a mock session package so the prototype can demonstrate the PT client workflow
+                useMockBackendStore.getState().upsertSessionPackage({
+                    clientId: "admin-prototype",
+                    totalSessions: 10,
+                    sessionsUsed: 2,
+                    sessionsRemaining: 8,
+                    packageType: "monthly",
+                });
+                
+                setLoading(false);
+            }, 0);
+            
+            return () => { mounted.current = false; };
+        }
 
         if (!isSupabaseConfigured) {
             // ── Mock mode ──────────────────────────────────────────────
@@ -131,6 +163,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         let active = true;
 
+        if (PROTOTYPE_MODE) return;
         if (!isSupabaseConfigured) return;
 
         if (!sessionData?.user?.id) {

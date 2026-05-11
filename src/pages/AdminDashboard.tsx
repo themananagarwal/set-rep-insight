@@ -1,9 +1,10 @@
 import { useState, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { QRCodeGenerator } from '../components/QRCodeGenerator';
 import type { UserProfile, Routine } from '../lib/types';
 import { useMockBackendStore } from '../lib/mockBackend';
 import { useTrainerStore } from '../lib/store';
-import { Users, BookOpen, Settings, LogOut, Plus, User as UserIcon, ArrowLeft, Activity, Calendar, X, Dices, Dumbbell, Pencil, Search, Trash2, CheckCircle, FolderOpen, Copy } from 'lucide-react';
+import { Users, BookOpen, Settings, LogOut, Plus, User as UserIcon, ArrowLeft, Activity, Calendar, X, Dices, Dumbbell, Pencil, Search, Trash2, CheckCircle, FolderOpen, Copy, Camera } from 'lucide-react';
 import { ProgramBuilder } from '../components/ProgramBuilder';
 
 export default function AdminDashboard() {
@@ -58,6 +59,7 @@ export default function AdminDashboard() {
     const [assigningToClient, setAssigningToClient] = useState<string | null>(null);
     const [clientRoutineToDelete, setClientRoutineToDelete] = useState<{ clientId: string; routineId: string } | null>(null);
     const [clientToRemove, setClientToRemove] = useState<UserProfile | null>(null);
+    const [showQRGenerator, setShowQRGenerator] = useState(false);
     const [editingRoutine, setEditingRoutine] = useState<import('../lib/types').TrainerRoutine | null>(null);
 
     // Library State
@@ -244,13 +246,22 @@ export default function AdminDashboard() {
                                 <h2 className="text-3xl font-bold tracking-tight mb-2">My Clients</h2>
                                 <p className="text-zinc-400">Manage your active clients and their programs.</p>
                             </div>
-                            <button
-                                onClick={() => setIsAddingClient(true)}
-                                className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 rounded-full font-bold transition-colors shadow-[0_0_20px_rgba(220,38,38,0.3)]"
-                            >
-                                <Plus size={20} />
-                                Add Client
-                            </button>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setShowQRGenerator(true)}
+                                    className="flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white px-5 py-2.5 rounded-full font-bold transition-colors"
+                                >
+                                    <Camera size={20} />
+                                    Show QR
+                                </button>
+                                <button
+                                    onClick={() => setIsAddingClient(true)}
+                                    className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 rounded-full font-bold transition-colors shadow-[0_0_20px_rgba(220,38,38,0.3)]"
+                                >
+                                    <Plus size={20} />
+                                    Add Client
+                                </button>
+                            </div>
                         </div>
 
                         {clients.length === 0 ? (
@@ -1172,8 +1183,8 @@ export default function AdminDashboard() {
                         <p className="text-zinc-400 text-sm mb-6 text-center">Are you sure you want to permanently remove <strong className="text-white">{clientToRemove.name}</strong> from your roster? This action cannot be undone and will revoke their app access.</p>
                         <div className="flex gap-3">
                             <button 
-                                onClick={() => {
-                                    deleteUser(clientToRemove.id);
+                                onClick={async () => {
+                                    await deleteUser(clientToRemove.id);
                                     if (selectedClient?.id === clientToRemove.id) setSelectedClient(null);
                                     setClientToRemove(null);
                                 }}
@@ -1186,6 +1197,14 @@ export default function AdminDashboard() {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* QR Generator */}
+            {showQRGenerator && (
+                <QRCodeGenerator 
+                    trainerId={user.id} 
+                    onClose={() => setShowQRGenerator(false)} 
+                />
             )}
         </div>
     );
