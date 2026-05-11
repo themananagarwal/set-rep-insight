@@ -124,7 +124,7 @@ export default function Sessions() {
                 <QRScanner 
                     clientId={user.id} 
                     onClose={() => setShowScanner(false)} 
-                    onSuccess={(trainerId) => {
+                    onSuccess={() => {
                         // Let the state automatically update sessions and history
                     }}
                 />

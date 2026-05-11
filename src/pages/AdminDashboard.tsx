@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { QRCodeGenerator } from '../components/QRCodeGenerator';
-import type { UserProfile, Routine } from '../lib/types';
+import type { UserProfile } from '../lib/types';
 import { useMockBackendStore } from '../lib/mockBackend';
 import { useTrainerStore } from '../lib/store';
 import { Users, BookOpen, Settings, LogOut, Plus, User as UserIcon, ArrowLeft, Activity, Calendar, X, Dices, Dumbbell, Pencil, Search, Trash2, CheckCircle, FolderOpen, Copy, Camera } from 'lucide-react';
@@ -105,11 +105,11 @@ export default function AdminDashboard() {
     const [noteForm, setNoteForm] = useState({ patientFeedback: '', treatmentDone: '', remarks: '' });
     const [isSavingEval, setIsSavingEval] = useState(false);
 
-    const handleAddClientSubmit = (e: React.FormEvent) => {
+    const handleAddClientSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!user) return;
         
-        const finalUser = addClient({
+        const finalUser = await addClient({
             email: newClient.email.toLowerCase(),
             phone: newClient.phone,
             password: newClient.password,
