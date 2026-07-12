@@ -79,6 +79,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     name: "Test Client",
                     role: "client",
                     type: "gym",
+                    height: 180,
+                    weight: 80,
                 };
                 setUser(mockClient);
                 trainerStore.setUser(mockClient);
