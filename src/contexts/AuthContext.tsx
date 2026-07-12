@@ -73,24 +73,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             
             // Wait for next tick so mockBackend is definitely initialized if there are circular deps
             setTimeout(() => {
-                const mockAdmin: UserProfile = {
-                    id: "admin-prototype",
-                    email: "founder@ptapp.demo",
-                    name: "Lead Trainer",
-                    role: "admin",
+                const mockClient: UserProfile = {
+                    id: "client-prototype",
+                    email: "tester@ptapp.demo",
+                    name: "Test Client",
+                    role: "client",
+                    type: "gym",
                 };
-                setUser(mockAdmin);
-                trainerStore.setUser(mockAdmin);
-                setViewMode('admin');
-
-                // Inject a mock session package so the prototype can demonstrate the PT client workflow
-                useMockBackendStore.getState().upsertSessionPackage({
-                    clientId: "admin-prototype",
-                    trainerId: "admin-prototype",
-                    totalSessions: 10,
-                    sessionsUsed: 2,
-                    sessionsRemaining: 8,
-                });
+                setUser(mockClient);
+                trainerStore.setUser(mockClient);
+                setViewMode('client');
                 
                 setLoading(false);
             }, 0);
