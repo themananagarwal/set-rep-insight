@@ -134,7 +134,7 @@ export default function HistoryPage() {
                                         <div key={set.id} className="bg-surface border border-secondary p-4 rounded-xl flex justify-between items-center">
                                             <div className="flex flex-col">
                                                 <span className="font-bold">
-                                                    {exercises.find(e => e.id === set.exerciseId)?.name || set.exerciseId}
+                                                    {exercises.find(e => e.id === set.exerciseId || e.id.startsWith(set.exerciseId + '_'))?.name || set.exerciseId}
                                                 </span>
                                                 <span className="text-xs text-text-muted">
                                                     {format(new Date(set.completedAt), "h:mm a")}

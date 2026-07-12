@@ -33,7 +33,7 @@ export default function WorkoutSession() {
     // -- STRUCTURAL STATE --
     // Use the exerciseId from URL as primary source of truth
     const activeExerciseId = exerciseIdParam || (exercises[0] ? exercises[0].id : "unknown");
-    const activeExerciseData = exercises.find(e => e.id === activeExerciseId);
+    const activeExerciseData = exercises.find(e => e.id === activeExerciseId || e.id.startsWith(activeExerciseId + '_'));
     const plannedExercise = activeDay?.exercises.find(e => e.exerciseId === activeExerciseId) || onTheGoSession?.exercises.find(e => e.exerciseId === activeExerciseId);
     
     // sessionSets should only hold sets from the current live session for this specific exercise

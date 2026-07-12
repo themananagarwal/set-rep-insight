@@ -142,8 +142,8 @@ export default function WorkoutPreview() {
 
                     <div className="space-y-3 pb-24">
                         {currentDay?.exercises.map((ex, i) => {
-                            const exerciseDef = exercises.find(e => e.id === ex.exerciseId);
-                            const isTimed = exerciseDef?.muscle === "Cardio" || ex.exerciseId === "plank";
+                            const exerciseDef = exercises.find(e => e.id === ex.exerciseId || e.id.startsWith(ex.exerciseId + '_'));
+                            const isTimed = exerciseDef?.trackingType === "time" || exerciseDef?.muscle === "Cardio" || ex.exerciseId === "plank";
 
                             return (
                                 <div key={i} className="flex items-center gap-4 p-4 bg-secondary/30 rounded-xl border border-white/5">
@@ -151,7 +151,7 @@ export default function WorkoutPreview() {
                                         {isTimed ? <Clock size={18} /> : <Dumbbell size={18} />}
                                     </div>
                                     <div className="flex-1">
-                                        <h3 className="font-bold capitalize">{ex.exerciseId.replace(/_/g, " ")}</h3>
+                                        <h3 className="font-bold capitalize">{exerciseDef?.name || ex.exerciseId.replace(/_/g, " ")}</h3>
                                         <p className="text-xs text-text-muted">
                                             {isTimed ? `${ex.sets.length} Intervals` : `${ex.sets.length} Sets • ${ex.targetReps || "8-12"} Reps`}
                                         </p>

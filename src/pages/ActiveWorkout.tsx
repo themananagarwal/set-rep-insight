@@ -178,7 +178,7 @@ export default function ActiveWorkout() {
             {/* Exercise List */}
             <div className="space-y-4">
                 {currentExercises.map((ex, i) => {
-                    const exerciseData = exercises.find(e => e.id === ex.exerciseId);
+                    const exerciseData = exercises.find(e => e.id === ex.exerciseId || e.id.startsWith(ex.exerciseId + '_'));
                     const recentSets = history.filter(h =>
                         h.exerciseId === ex.exerciseId &&
                         h.completedAt > (isOnTheGo ? onTheGoSession!.startTime : Date.now() - 1000 * 60 * 60 * 12)

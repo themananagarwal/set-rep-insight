@@ -336,7 +336,7 @@ export default function WorkoutBuilder() {
                     {/* Exercises List */}
                     <div className="space-y-4">
                         {currentDay.exercises.map((exPattern, exIndex) => {
-                            const exerciseData = exercises.find(e => e.id === exPattern.exerciseId);
+                            const exerciseData = exercises.find(e => e.id === exPattern.exerciseId || e.id.startsWith(exPattern.exerciseId + '_'));
                             const isTimed = exerciseData?.trackingType === "time";
 
                             return (

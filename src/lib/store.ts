@@ -26,7 +26,7 @@ interface TrainerState {
     setRoutine: (routine: Routine) => void;
 
     addSet: (set: WorkoutSet) => void;
-    addExercise: (name: string, muscle: string, trackingType?: "reps" | "time") => void;
+    addExercise: (name: string, muscle: string, trackingType?: "reps" | "time") => string;
     completeActiveRoutineDay: () => void;
     getPrediction: (exerciseId: string) => Prediction;
     syncExercises: () => void;
@@ -98,16 +98,18 @@ export const useTrainerStore = create<TrainerState>()(
                 history: [...state.history, newSet]
             })),
 
-            addExercise: (name, muscle, trackingType) => set((state) => {
+            addExercise: (name, muscle, trackingType) => {
+                const id = name.toLowerCase().replace(/\s/g, '_') + '_' + Date.now().toString(36);
                 const newEx: Exercise = {
-                    id: name.toLowerCase().replace(/\s/g, '_') + '_' + Date.now().toString(36),
+                    id,
                     name,
                     muscle,
                     type: "isolation",
                     trackingType: trackingType || "reps"
                 };
-                return { exercises: [...state.exercises, newEx] };
-            }),
+                set((state) => ({ exercises: [...state.exercises, newEx] }));
+                return id;
+            },
 
             completeActiveRoutineDay: () => set((state) => {
                 if (!state.activeRoutineId) return {};

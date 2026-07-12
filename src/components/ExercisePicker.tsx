@@ -56,8 +56,7 @@ export default function ExercisePicker({ onSelect, onBack }: ExercisePickerProps
             setEditingId(null);
         } else {
             const trackingType = newType === "compound" ? "time" : "reps";
-            addExercise(newName, newMuscle, trackingType);
-            const generatedId = newName.toLowerCase().replace(/\s/g, '_');
+            const generatedId = addExercise(newName, newMuscle, trackingType);
             onSelect(generatedId);
         }
         
